@@ -96,20 +96,39 @@ jobs:
             if [ -n "$ZIP" ]; then echo "Источник сборок: черновик релиза в этом репозитории"; fi
           fi
 
-          # 4) репозиторий bonelab-workspace (если он публичный)
+          # 4) публичный репозиторий bonelab-workspace — БЕЗ токена:
+          #    токен Actions действует только на этот репозиторий.
           if [ -z "$ZIP" ]; then
-            gh release download -R "$WORKSPACE_REPO" -p "*.zip" -D stage/assemblies_zip --clobber 2>/dev/null || true
-            ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
-            if [ -n "$ZIP" ]; then
-              echo "Источник сборок: релиз $WORKSPACE_REPO"
-            else
-              if git clone --depth 1 "https://github.com/$WORKSPACE_REPO" stage/public 2>/dev/null; then
-                DIR=$(find stage/public -type d -name Il2CppAssemblies 2>/dev/null | head -1)
-                if [ -n "$DIR" ]; then
-                  cp -r "$DIR"/. stage/assemblies_raw/
-                  echo "Источник сборок: git-клон $WORKSPACE_REPO"
+            REL=$(curl -sS --max-time 60 "https://api.github.com/repos/$WORKSPACE_REPO/releases?per_page=20" 2>/dev/null || true)
+            URL=$(printf '%s' "$REL" | grep -oE '"browser_download_url"[ ]*:[ ]*"[^"]+"' | head -1 | sed -E 's/.*"(https[^"]+)"/\1/')
+            if [ -n "$URL" ]; then
+              echo "Релиз $WORKSPACE_REPO: $URL"
+              if curl -sSL --max-time 900 "$URL" -o stage/assemblies_zip/workspace.zip; then
+                ZIP=stage/assemblies_zip/workspace.zip
+                echo "Источник сборок: релиз $WORKSPACE_REPO"
+              fi
+            fi
+          fi
+
+          if [ -z "$ZIP" ]; then
+            rm -rf stage/public
+            if git -c credential.helper= clone --depth 1 "https://github.com/$WORKSPACE_REPO" stage/public >/dev/null 2>&1; then
+              echo "Клон $WORKSPACE_REPO получен, ищу сборки:"
+              find stage/public -maxdepth 3 -type d | head -20
+              DIR=$(find stage/public -type d -name Il2CppAssemblies 2>/dev/null | head -1)
+              if [ -n "$DIR" ]; then
+                cp -r "$DIR"/. stage/assemblies_raw/
+                echo "Источник сборок: git-клон $WORKSPACE_REPO ($DIR)"
+              else
+                FOUND=$(find stage/public -name "*.dll" 2>/dev/null | wc -l)
+                echo "Папки Il2CppAssemblies нет, DLL в репозитории: $FOUND"
+                if [ "$FOUND" -gt 0 ]; then
+                  find stage/public -name "*.dll" -exec cp -n {} stage/assemblies_raw/ \;
+                  echo "Источник сборок: DLL прямо из git-клона $WORKSPACE_REPO"
                 fi
               fi
+            else
+              echo "Клон $WORKSPACE_REPO не удался (репозиторий приватный?)"
             fi
           fi
 
