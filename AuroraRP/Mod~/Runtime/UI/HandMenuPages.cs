@@ -599,6 +599,72 @@ namespace AuroraRP
                     menu.Rebuild();
                 });
 
+            menu.AddSpacer(6f);
+            menu.AddSection(AuroraL.Get("settings.palm.header"), UiTheme.Accent);
+
+            menu.AddRow(
+                AuroraL.Get("settings.palm.autoshow") + ": " + (cfg.palmAutoShow ? AuroraL.Get("common.yes") : AuroraL.Get("common.no")),
+                "info",
+                null,
+                () =>
+                {
+                    cfg.palmAutoShow = !cfg.palmAutoShow;
+                    AuroraConfig.Save();
+                    menu.Rebuild();
+                });
+
+            menu.AddRow(
+                AuroraL.Get("settings.palm.offset") + ": " + cfg.palmOffsetZ.ToString("0.000") + " м",
+                "gear",
+                AuroraL.Get("settings.palm.offset.hint"),
+                () =>
+                {
+                    // Шаг 5 мм, по кругу 5 мм … 120 мм — подгоняем под свою руку без правки файлов.
+                    cfg.palmOffsetZ += 0.005f;
+
+                    if (cfg.palmOffsetZ > 0.1201f)
+                    {
+                        cfg.palmOffsetZ = 0.005f;
+                    }
+
+                    AuroraConfig.Save();
+                    menu.Rebuild();
+                });
+
+            menu.AddRow(
+                AuroraL.Get("settings.palm.tilt") + ": " + Mathf.RoundToInt(cfg.palmTilt) + "°",
+                "gear",
+                AuroraL.Get("settings.palm.tilt.hint"),
+                () =>
+                {
+                    // Шаг 5°, по кругу -45° … +45°.
+                    cfg.palmTilt += 5f;
+
+                    if (cfg.palmTilt > 45.1f)
+                    {
+                        cfg.palmTilt = -45f;
+                    }
+
+                    AuroraConfig.Save();
+                    menu.Rebuild();
+                });
+
+            menu.AddRow(
+                AuroraL.Get("settings.palm.reset"),
+                "back",
+                null,
+                () =>
+                {
+                    cfg.palmOffsetZ = 0.035f;
+                    cfg.palmTilt = 0f;
+                    cfg.palmAutoShow = true;
+                    AuroraConfig.Save();
+                    menu.Rebuild();
+                },
+                AuroraButton.Style.Ghost);
+
+            menu.AddSpacer(6f);
+
             menu.AddRow(
                 AuroraL.Get("settings.haptics") + ": " + (cfg.haptics ? AuroraL.Get("common.yes") : AuroraL.Get("common.no")),
                 "info",

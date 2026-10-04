@@ -32,7 +32,7 @@ namespace AuroraRP
         public bool palmAutoShow = true;
 
         /// <summary>Вынос панели меню из плоскости ладони (метры).</summary>
-        public float palmOffsetZ = 0.02f;
+        public float palmOffsetZ = 0.035f;
 
         /// <summary>Наклон панели на ладони в градусах (если меню «смотрит не туда»).</summary>
         public float palmTilt = 0f;
