@@ -1,0 +1,11 @@
+  Determining projects to restore...
+  Restored /home/runner/work/MarrowSDK-Extended/MarrowSDK-Extended/AuroraRP/Mod~/AuroraRP.csproj (in 59 ms).
+  AuroraRP: LabFusion найден — сборка с мультиплеером.
+  AuroraRP: UnityEngine.XRModule найден — жест Y+A читается напрямую.
+  AuroraRP -> /home/runner/work/MarrowSDK-Extended/MarrowSDK-Extended/out/AuroraRP.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.41
