@@ -46,6 +46,15 @@
     <Compile Include="Runtime\**\*.cs" />
   </ItemGroup>
 
+  <!--
+    «Всё в одном плагине»: красота (меню, иконки, анимации, партиклы, звуки) лежит внутри DLL.
+    Пак собирается в Unity: AuroraRP → 7. Вшить красоту в DLL (или автоматически в «3. СОБРАТЬ ВСЁ»)
+    и кладётся в Runtime/Assets/aurorarp.pack. Файл — артефакт сборки, в git не коммитится.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Runtime\Assets\aurorarp.pack" LogicalName="AuroraRP.aurorarp.pack" Condition="Exists('Runtime\Assets\aurorarp.pack')" />
+  </ItemGroup>
+
   <!-- Сборки игры (IL2CPP interop) + MelonLoader + моды-зависимости.
        Пути выводятся из $(BonelabDir); переопределить можно любой из них. -->
   <PropertyGroup>

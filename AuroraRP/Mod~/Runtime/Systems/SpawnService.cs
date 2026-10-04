@@ -48,6 +48,16 @@ namespace AuroraRP
                     MissingBarcodes.Remove(barcode);
                     return true;
                 }
+
+                // «Всё в плагине»: предмета нет в палетах, но он зашит в пак внутри DLL.
+                string fromPack = AuroraPack.PrefabNameForBarcode(barcode);
+
+                if (!string.IsNullOrEmpty(fromPack))
+                {
+                    title = fromPack + " (из DLL)";
+                    MissingBarcodes.Remove(barcode);
+                    return true;
+                }
             }
             catch (Exception e)
             {
@@ -101,6 +111,14 @@ namespace AuroraRP
 
             _lastSpawnTime = Time.realtimeSinceStartup;
 
+            // «Всё в плагине»: предмет зашит в DLL — создаём его сами и рассылаем мод-игрокам,
+            // не полагаясь ни на палеты, ни на спавнер LabFusion.
+            if (AuroraPack.IsAvailable && !string.IsNullOrEmpty(AuroraPack.PrefabNameForBarcode(barcode)) &&
+                TrySpawnFromPack(barcode, position, rotation, allowNetwork, out error, callback))
+            {
+                return true;
+            }
+
             // В сети спавним через LabFusion: предмет становится сетевым и появляется у всех.
             // Важно: если у игрока нет палета мода, Fusion сам скачает его с mod.io.
             // Проверку Exists здесь пропускаем — локально палета может ещё не быть.
@@ -114,6 +132,12 @@ namespace AuroraRP
 
             if (!Exists(barcode, out _))
             {
+                // «Всё в плагине»: barcode'а нет в палетах, но объект зашит в пак внутри DLL.
+                if (TrySpawnFromPack(barcode, position, rotation, allowNetwork, out error, callback))
+                {
+                    return true;
+                }
+
                 error = "Barcode не найден: " + barcode;
                 AuroraLog.Warn(error);
                 return false;
@@ -164,6 +188,53 @@ namespace AuroraRP
                 AuroraLog.Exception(e, "spawn " + barcode);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// «Всё в плагине»: объект зашит в пак внутри AuroraRP.dll, а не в палете.
+        /// Создаём его сами, а остальных мод-игроков просим создать такой же у себя.
+        /// </summary>
+        private bool TrySpawnFromPack(string barcode, Vector3 position, Quaternion rotation, bool allowNetwork, out string error, Action<GameObject> callback)
+        {
+            error = null;
+
+            if (!AuroraPack.IsAvailable)
+            {
+                return false;
+            }
+
+            string prefab = AuroraPack.PrefabNameForBarcode(barcode);
+
+            if (string.IsNullOrEmpty(prefab))
+            {
+                return false;
+            }
+
+            if (allowNetwork)
+            {
+                var net = AuroraRuntime.Net;
+
+                if (net != null && net.IsConnected && net.IsHost)
+                {
+                    net.SendPackSpawn(prefab, position, rotation);
+                }
+            }
+
+            var go = AuroraPack.Instantiate(prefab, position, rotation);
+
+            if (go == null)
+            {
+                error = "Не удалось создать из DLL: " + prefab;
+                AuroraLog.Warn(error);
+                return false;
+            }
+
+            AuroraLog.Info("Спавн из DLL: {0} ({1})", prefab, barcode);
+
+            callback?.Invoke(go);
+            OnSpawned?.Invoke(go, barcode);
+
+            return true;
         }
 
         /// <summary>Позиция перед игроком: чуть ниже уровня глаз, чтобы предмет не падал с высоты.</summary>

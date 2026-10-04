@@ -249,12 +249,18 @@ namespace AuroraRP
         /// <summary>На сколько метров можно сместиться за удержание (чтобы это не была ходьба через дверь).</summary>
         public float passiveDoorStandStill = 0.5f;
 
-        // ------------------------------------------------------ красота (в палете)
+        // ------------------------------------------- красота (внутри DLL и/или в палете)
 
-        /// <summary>Брать иконки, скин меню, партиклы и звуки из палета AuroraRP.</summary>
+        /// <summary>
+        /// Брать иконки, скин меню, партиклы, анимации и звуки из пака внутри AuroraRP.dll.
+        /// Это основной путь: игроку достаточно одного плагина. Палет для красоты не нужен.
+        /// </summary>
+        public bool useEmbeddedVisuals = true;
+
+        /// <summary>Запасной путь: если в DLL пака нет — взять визуал из палета AuroraRP.</summary>
         public bool usePalletVisuals = true;
 
-        /// <summary>Barcode спавнабла с визуалом (иконки, скин, эффекты, звуки).</summary>
+        /// <summary>Barcode спавнабла с визуалом (нужен только для палетного пути).</summary>
         public string visualSetBarcode = "ItzHanchik.AuroraRP.Spawnable.VisualSet";
 
         /// <summary>Показывать эффект передачи денег (пачка купюр летит из руки в руку).</summary>
@@ -287,6 +293,26 @@ namespace AuroraRP
             AuroraConfig cfg = null;
             bool loaded = false;
 
+            // 0) Дефолтный конфиг из DLL: пак внутри AuroraRP.dll («всё в одном плагине»).
+            try
+            {
+                if (!string.IsNullOrEmpty(AuroraPack.ConfigJson))
+                {
+                    var embedded = JsonUtility.FromJson<AuroraConfig>(AuroraPack.ConfigJson);
+
+                    if (embedded != null)
+                    {
+                        cfg = embedded;
+                        loaded = true;
+                        AuroraLog.Info("Конфиг взят из DLL (встроенный в пак).");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "embedded config load");
+            }
+
             // 1) Конфиг из палета: приезжает вместе с контентом, работает у всех.
             try
             {
@@ -294,10 +320,11 @@ namespace AuroraRP
 
                 if (!string.IsNullOrEmpty(palletPath) && File.Exists(palletPath))
                 {
-                    cfg = JsonUtility.FromJson<AuroraConfig>(File.ReadAllText(palletPath));
+                    var palletConfig = JsonUtility.FromJson<AuroraConfig>(File.ReadAllText(palletPath));
 
-                    if (cfg != null)
+                    if (palletConfig != null)
                     {
+                        cfg = palletConfig;
                         loaded = true;
                         AuroraLog.Info("Конфиг взят из палета: " + palletPath);
                     }

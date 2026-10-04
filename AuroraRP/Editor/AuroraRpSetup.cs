@@ -105,6 +105,11 @@ namespace AuroraRP.EditorTools
     <Compile Include=""Runtime\**\*.cs"" />
   </ItemGroup>
 
+  <!-- «Красота» внутри DLL: пак с бандлами (Unity → AuroraRP → 7 / 3. СОБРАТЬ ВСЁ). -->
+  <ItemGroup>
+    <EmbeddedResource Include=""Runtime\Assets\aurorarp.pack"" LogicalName=""AuroraRP.aurorarp.pack"" Condition=""Exists('Runtime\Assets\aurorarp.pack')"" />
+  </ItemGroup>
+
   <ItemGroup>
 {references}
   </ItemGroup>

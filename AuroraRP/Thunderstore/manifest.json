@@ -2,6 +2,6 @@
   "name": "AuroraRP",
   "version_number": "1.0.0",
   "website_url": "https://github.com/ItzHanchik/MarrowSDK-Extended",
-  "description": "Роль-плей система для BONELAB: роли, деньги, двери, магазин оружия, контракты, VR-меню над рукой.",
+  "description": "Роль-плей система для BONELAB одним плагином: роли, деньги, двери, магазин, контракты, VR-меню. Всё (включая меню, иконки, анимации и звуки) уже внутри DLL — ничего докачивать не нужно.",
   "dependencies": []
 }

@@ -125,6 +125,10 @@ namespace AuroraRP
                         HandleSpawnItem(msg);
                         break;
 
+                    case AuroraMsgType.SpawnPack:
+                        HandleSpawnPack(msg);
+                        break;
+
                     case AuroraMsgType.FxEvent:
                         HandleFx(msg);
                         break;
@@ -238,6 +242,45 @@ namespace AuroraRP
             {
                 AuroraRuntime.Spawn.TrySpawn(barcode, AuroraRuntime.Spawn.SpawnPositionInFrontOfLocalPlayer(), Quaternion.identity, out _);
             }
+        }
+
+        /// <summary>
+        /// «Всё в плагине»: хост просит создать объект из пака внутри DLL.
+        /// Палет не нужен — бандлы уже внутри AuroraRP.dll у всех мод-игроков.
+        /// </summary>
+        private void HandleSpawnPack(AuroraNetMsg msg)
+        {
+            // Спавн «по указке» принимаем только от хоста.
+            if (!AuroraRuntime.Net.IsHost && msg.Sender != AuroraRuntime.Net.HostId)
+            {
+                return;
+            }
+
+            string prefab = null;
+            Vector3 position = Vector3.zero;
+            Quaternion rotation = Quaternion.identity;
+
+            AuroraWire.Read(msg.Data, r =>
+            {
+                prefab = r.ReadString();
+                position = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+                rotation = new Quaternion(r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+            });
+
+            if (string.IsNullOrEmpty(prefab))
+            {
+                return;
+            }
+
+            var instance = AuroraPack.Instantiate(prefab, position, rotation);
+
+            if (instance == null)
+            {
+                AuroraLog.Warn("Объект из пака не создался: {0}", prefab);
+                return;
+            }
+
+            AuroraLog.Info("Объект из пака создан по просьбе хоста: {0}", prefab);
         }
 
         private void HandleAction(AuroraNetMsg msg)

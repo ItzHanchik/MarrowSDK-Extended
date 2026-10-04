@@ -49,6 +49,7 @@ namespace AuroraRP
 
         private static GameObject _holder;
         private static bool _loading;
+        private static bool _packFailed;
         private static int _attempts;
         private static float _lastAttempt;
 
@@ -68,7 +69,7 @@ namespace AuroraRP
 
             var cfg = AuroraConfig.Current;
 
-            if (!cfg.usePalletVisuals)
+            if (!cfg.useEmbeddedVisuals && !cfg.usePalletVisuals)
             {
                 return;
             }
@@ -84,12 +85,116 @@ namespace AuroraRP
                 return;
             }
 
+            // 1) Красота, зашитая в DLL (основной путь).
+            if (cfg.useEmbeddedVisuals && !_packFailed && AuroraPack.IsAvailable)
+            {
+                if (TryLoadEmbedded())
+                {
+                    return;
+                }
+
+                _packFailed = true;
+                AuroraLog.Warn("Пак в DLL не разобрался — пробую палет и кодовые заглушки.");
+            }
+
+            // 2) Палет (необязательный запасной путь).
+            if (!cfg.usePalletVisuals)
+            {
+                return;
+            }
+
             if (_attempts >= 40 || Time.realtimeSinceStartup - _lastAttempt < 4f)
             {
                 return;
             }
 
             TryLoad();
+        }
+
+        /// <summary>
+        /// Красота из DLL: бандлы, зашитые в AuroraRP.dll (ресурс «aurorarp.pack»).
+        /// Палет для этого не нужен.
+        /// </summary>
+        private static bool TryLoadEmbedded()
+        {
+            if (!AuroraPack.EnsureLoaded())
+            {
+                return false;
+            }
+
+            GameObject holder = null;
+
+            try
+            {
+                holder = AuroraPack.Instantiate(AuroraPack.VisualSetPrefab, new Vector3(0f, -900f, 0f), Quaternion.identity);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "pack visual set");
+            }
+
+            if (holder != null)
+            {
+                _holder = holder;
+                holder.SetActive(false);
+
+                var body = holder.GetComponent<Rigidbody>();
+                if (body != null)
+                {
+                    body.useGravity = false;
+                    body.isKinematic = true;
+                }
+
+                Harvest(holder.transform);
+            }
+
+            HarvestPack();
+
+            Ready = Parts.Count > 0 || Sprites.Count > 0 || Materials.Count > 0 || Sounds.Count > 0;
+
+            if (Ready)
+            {
+                AuroraLog.Info("Красота из DLL загружена: {0} объектов, {1} иконок, {2} звуков",
+                    Parts.Count, Sprites.Count, Sounds.Count);
+            }
+
+            return Ready;
+        }
+
+        /// <summary>Ассеты пака, лежащие в бандле отдельно от префаба (иконки, звуки, анимации).</summary>
+        private static void HarvestPack()
+        {
+            foreach (var pair in AuroraPack.AllSprites)
+            {
+                if (!string.IsNullOrEmpty(pair.Key) && pair.Value != null && !Sprites.ContainsKey(pair.Key))
+                {
+                    Sprites[pair.Key] = pair.Value;
+                }
+            }
+
+            foreach (var pair in AuroraPack.AllClips)
+            {
+                if (!string.IsNullOrEmpty(pair.Key) && pair.Value != null && !Sounds.ContainsKey(pair.Key))
+                {
+                    Sounds[pair.Key] = pair.Value;
+                }
+            }
+
+            foreach (var pair in AuroraPack.AllMaterials)
+            {
+                if (!string.IsNullOrEmpty(pair.Key) && pair.Value != null && !Materials.ContainsKey(pair.Key))
+                {
+                    Materials[pair.Key] = pair.Value;
+                }
+            }
+
+            foreach (var pair in AuroraPack.AllControllers)
+            {
+                if (!string.IsNullOrEmpty(pair.Key) && pair.Value != null && !Animators.ContainsKey(pair.Key))
+                {
+                    Animators[pair.Key] = pair.Value;
+                }
+            }
         }
 
         private static void TryLoad()
@@ -227,6 +332,17 @@ namespace AuroraRP
         {
             Flights.Clear();
             Temp.Clear();
+            AuroraPack.Shutdown();
+
+            Sprites.Clear();
+            Materials.Clear();
+            Sounds.Clear();
+            Animators.Clear();
+            Parts.Clear();
+
+            Ready = false;
+            _holder = null;
+            _packFailed = false;
         }
 
         // ------------------------------------------------------------------- доступ

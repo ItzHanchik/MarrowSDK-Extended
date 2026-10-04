@@ -1,14 +1,10 @@
 {
-  "_readme": "Манифест AuroraRP. Его читает плагин AuroraRPUpdater.dll (папка Plugins). Он качает свежий AuroraRP.dll в Mods, обновляет палет в MODS и доставляет моды, без которых AuroraRP не работает (BoneLib, LabFusion). После выпуска новой версии: приложите AuroraRP.dll и палет-архив к GitHub-релизу и обновите поля ниже.",
-
+  "_readme": "Манифест AuroraRP. Его читает плагин AuroraRPUpdater.dll (папка Plugins). Он качает свежий AuroraRP.dll в Mods, при необходимости обновляет палет в MODS и доставляет моды, без которых AuroraRP не работает (BoneLib, LabFusion). ВАЖНО: вся красота (меню, иконки, анимации, эффекты, звуки) зашита ВНУТРЬ AuroraRP.dll — палет игроку не нужен. Поля pallet/palletVersion оставьте пустыми, если палет не выкладываете. После выпуска новой версии: приложите AuroraRP.dll к GitHub-релизу и обновите поля ниже.",
   "version": "1.0.0",
-
   "dll": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP.dll",
   "dllSha256": "",
-
   "pallet": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-pallet-1.0.0.zip",
   "palletVersion": "1.0.0",
-
   "dependencies": [
     {
       "file": "BoneLib.dll",
@@ -30,6 +26,5 @@
       "force": false
     }
   ],
-
-  "notes": "Первый релиз AuroraRP: роли, экономика, двери, магазин, контракты, меню над рукой, Discord-банк. Конфиг системы едет внутри палета."
+  "notes": "AuroraRP 1.0.0: роли, экономика, двери, магазин, контракты, меню над рукой, Discord-банк. Всё в одном плагине: красота (меню, иконки, анимации передачи денег, партиклы, звуки) зашита внутрь AuroraRP.dll. Палет — необязательный (нужен только тем, у кого нет мода)."
 }

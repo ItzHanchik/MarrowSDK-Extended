@@ -1,6 +1,8 @@
 # === AuroraRP ===
 AuroraRP/Mod~/bin/
 AuroraRP/Mod~/obj/
+# Пак «красота внутри DLL» — артефакт Unity-сборки (вшивается в AuroraRP.dll)
+AuroraRP/Mod~/Runtime/Assets/*.pack
 AuroraRP/Updater/bin/
 AuroraRP/Updater/obj/
 AuroraRP/Builds/

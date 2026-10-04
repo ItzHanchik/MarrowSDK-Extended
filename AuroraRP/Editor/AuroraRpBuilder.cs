@@ -39,45 +39,14 @@ namespace AuroraRP.EditorTools
                     return;
                 }
 
-                // ---- 2. DLL ---------------------------------------------------------------
-                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю AuroraRP.dll (dotnet build)...", 0.2f);
-                bool dllOk = AuroraRpSetup.BuildModDll(out string buildLog);
-                report.AppendLine(dllOk ? "• DLL: собрана" : "• DLL: НЕ собрана");
-
-                if (!dllOk)
-                {
-                    Debug.LogWarning("[AuroraRP] Сборка DLL не удалась:\n" + buildLog);
-                    bool continueAnyway = EditorUtility.DisplayDialog("AuroraRP",
-                        "Не удалось собрать DLL мода.\n\n" +
-                        "Палет соберём, но роли/деньги/двери не заработают без AuroraRP.dll.\n\n" +
-                        "Лог:\n" + Trim(buildLog, 900) + "\n\nПродолжить сборку палета?",
-                        "Продолжить", "Отмена");
-
-                    if (!continueAnyway)
-                    {
-                        EditorUtility.ClearProgressBar();
-                        return;
-                    }
-                }
-
-                // ---- 3. Апдейтер (плагин автообновления) ---------------------------------
-                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю AuroraRPUpdater.dll (автообновление)...", 0.4f);
-                bool updaterOk = AuroraRpSetup.BuildUpdaterDll(out string updaterLog);
-                report.AppendLine(updaterOk ? "• Апдейтер: собран" : "• Апдейтер: НЕ собран");
-
-                if (!updaterOk)
-                {
-                    Debug.LogWarning("[AuroraRP] Сборка апдейтера не удалась:\n" + updaterLog);
-                }
-
-                // ---- 4. Контент палета ----------------------------------------------------
-                EditorUtility.DisplayProgressBar("AuroraRP", "Создаю контент палета...", 0.45f);
+                // ---- 2. Контент палета ----------------------------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Создаю контент палета...", 0.1f);
                 AuroraRpContent.CreateContent();
                 var pallet = AuroraRpContent.GetOrCreatePallet();
                 report.AppendLine("• Палет: " + AssetDatabase.GetAssetPath(pallet));
 
-                // ---- 5. Упаковка палета ---------------------------------------------------
-                EditorUtility.DisplayProgressBar("AuroraRP", "Упаковываю палет (Addressables)...", 0.6f);
+                // ---- 3. Упаковка палета (Addressables) ------------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Упаковываю контент (Addressables)...", 0.25f);
                 bool packed = PalletPackerEditor.PackPallet(pallet, out var packResult, false, false);
 
                 string packError = packResult != null ? packResult.Error : null;
@@ -85,15 +54,15 @@ namespace AuroraRP.EditorTools
                 {
                     EditorUtility.ClearProgressBar();
                     EditorUtility.DisplayDialog("AuroraRP",
-                        "Палет не упаковался.\n\n" + (packError ?? "Неизвестная ошибка упаковки."),
+                        "Контент не упаковался.\n\n" + (packError ?? "Неизвестная ошибка упаковки."),
                         "Ок");
                     return;
                 }
 
                 string palletFolder = AddressablesManager.EvaluateProfileValueBuildPathForPallet(pallet, AddressablesManager.ProfilePalletID);
-                report.AppendLine("• Собранный палет: " + palletFolder);
+                report.AppendLine("• Собранный контент: " + palletFolder);
 
-                // Кладём конфиг внутрь палета: вся «система» едет вместе с контентом.
+                // Кладём конфиг внутрь контента: настройки едут вместе с палетом (необязательный путь).
                 if (CopyPalletConfig(palletFolder, out string configMessage))
                 {
                     report.AppendLine("• " + configMessage);
@@ -103,7 +72,63 @@ namespace AuroraRP.EditorTools
                     report.AppendLine("• ВНИМАНИЕ: " + configMessage);
                 }
 
-                // ---- 6. Установка в игру --------------------------------------------------
+                // ---- 4. Пак «вся красота» внутрь DLL --------------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Вшиваю красоту в DLL (пак)...", 0.45f);
+                string packPath = AuroraRpPack.CreatePack(palletFolder, out string packMessage);
+
+                if (packPath != null)
+                {
+                    long packSize = 0;
+
+                    try
+                    {
+                        packSize = new FileInfo(packPath).Length;
+                    }
+                    catch
+                    {
+                        // размер не критичен
+                    }
+
+                    report.AppendLine("• Пак в DLL: " + (packSize / 1024) + " КБ (" + packPath + ")");
+                }
+                else
+                {
+                    report.AppendLine("• Пак в DLL: НЕ собран — " + packMessage);
+                    Debug.LogWarning("[AuroraRP] " + packMessage);
+                }
+
+                // ---- 5. DLL (с красотой внутри) -------------------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю AuroraRP.dll (dotnet build)...", 0.6f);
+                bool dllOk = AuroraRpSetup.BuildModDll(out string buildLog);
+                report.AppendLine(dllOk ? "• DLL: собрана (красота внутри)" : "• DLL: НЕ собрана");
+
+                if (!dllOk)
+                {
+                    Debug.LogWarning("[AuroraRP] Сборка DLL не удалась:\n" + buildLog);
+                    bool continueAnyway = EditorUtility.DisplayDialog("AuroraRP",
+                        "Не удалось собрать DLL мода.\n\n" +
+                        "Без AuroraRP.dll роли/деньги/двери не заработают.\n\n" +
+                        "Лог:\n" + Trim(buildLog, 900) + "\n\nПродолжить сборку архивов?",
+                        "Продолжить", "Отмена");
+
+                    if (!continueAnyway)
+                    {
+                        EditorUtility.ClearProgressBar();
+                        return;
+                    }
+                }
+
+                // ---- 6. Апдейтер (плагин автообновления) ---------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю AuroraRPUpdater.dll (автообновление)...", 0.7f);
+                bool updaterOk = AuroraRpSetup.BuildUpdaterDll(out string updaterLog);
+                report.AppendLine(updaterOk ? "• Апдейтер: собран" : "• Апдейтер: НЕ собран");
+
+                if (!updaterOk)
+                {
+                    Debug.LogWarning("[AuroraRP] Сборка апдейтера не удалась:\n" + updaterLog);
+                }
+
+                // ---- 7. Установка в игру --------------------------------------------------
                 EditorUtility.DisplayProgressBar("AuroraRP", "Устанавливаю в BONELAB...", 0.8f);
                 AuroraRpSetup.InstallToMods(palletFolder, out string installMessage);
                 report.AppendLine("• " + installMessage);
@@ -120,7 +145,7 @@ namespace AuroraRP.EditorTools
                     }
                 }
 
-                // ---- 7. Архивы для релиза -------------------------------------------------
+                // ---- 8. Архивы для релиза -------------------------------------------------
                 EditorUtility.DisplayProgressBar("AuroraRP", "Собираю архивы...", 0.9f);
                 string zipPath = CreateReleaseZip(palletFolder, dllSource);
                 report.AppendLine("• Архив для игроков: " + zipPath);
@@ -217,12 +242,13 @@ namespace AuroraRP.EditorTools
             File.WriteAllText(Path.Combine(staging, "ПРОЧТИ_МЕНЯ.txt"),
                 "AuroraRP " + AuroraRpPaths.ModVersion + " — установка:\r\n" +
                 "\r\n" +
-                "БЫСТРАЯ (рекомендуется):\r\n" +
-                "1) AuroraRP.dll            -> в  <BONELAB>\\Mods\r\n" +
+                "ВСЁ В ОДНОМ ПЛАГИНЕ: красота (меню, иконки, анимации, эффекты, звуки) уже внутри AuroraRP.dll.\r\n" +
+                "\r\n" +
+                "1) AuroraRP.dll                -> в  <BONELAB>\\Mods\r\n" +
                 "2) Plugins\\AuroraRPUpdater.dll -> в  <BONELAB>\\Plugins   (один раз!)\r\n" +
-                "   Дальше сам следит за обновлениями AuroraRP.dll и палета.\r\n" +
-                "3) папку из Mods\\... (палет) -> в  %USERPROFILE%\\AppData\\LocalLow\\Stress Level Zero\\BONELAB\\MODS\r\n" +
-                "   (можно и не копировать: палет скачается сам с mod.io)\r\n" +
+                "   Дальше сам следит за обновлениями AuroraRP.dll.\r\n" +
+                "3) Палет (папка из Mods\\...) копировать НЕ обязательно — он нужен только тем,\r\n" +
+                "   у кого нет мода, чтобы они видели терминал/принтер/двери.\r\n" +
                 "\r\n" +
                 "ИГРА: двойное нажатие обоих триггеров — меню. B — двери. X — перевод денег.\r\n" +
                 "\r\n" +

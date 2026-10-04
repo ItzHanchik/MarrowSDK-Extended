@@ -16,7 +16,13 @@ namespace AuroraRP
         Action = 5,      // запрос клиента к хосту (см. AuroraAction)
 
         /// <summary>Хост просит клиента проиграть эффект из палета (деньги, покупка...).</summary>
-        FxEvent = 6
+        FxEvent = 6,
+
+        /// <summary>
+        /// Хост -> клиенты: создай объект из пака внутри DLL (красота и контент «всё в плагине»).
+        /// Палет для этого не нужен — бандлы у всех мод-игроков уже внутри AuroraRP.dll.
+        /// </summary>
+        SpawnPack = 7
     }
 
     /// <summary>Действия, которые применяет хост.</summary>
@@ -128,6 +134,12 @@ namespace AuroraRP
         /// false — сеть недоступна, спавним локально (AssetSpawner).
         /// </summary>
         bool TryNetworkSpawn(string barcode, Vector3 position, Quaternion rotation, Action<GameObject> callback);
+
+        /// <summary>
+        /// Рассылает мод-игрокам просьбу создать объект из пака внутри DLL.
+        /// Работает без палетов: бандлы уже внутри AuroraRP.dll у всех, у кого стоит мод.
+        /// </summary>
+        void SendPackSpawn(string prefab, Vector3 position, Quaternion rotation);
 
         /// <summary>Палет мода уже установлен у этого игрока.</summary>
         bool HasContentPallet { get; }
@@ -420,6 +432,32 @@ namespace AuroraRP
         {
             var data = AuroraWire.Build(w => w.Write(barcode ?? ""));
             Send(new AuroraNetMsg(AuroraMsgType.SpawnItem, LocalId, data), target);
+        }
+
+        /// <summary>
+        /// «Всё в плагине»: просим всех мод-игроков создать объект из пака внутри DLL.
+        /// Палеты не нужны — бандлы уже внутри AuroraRP.dll у каждого, кто поставил мод.
+        /// </summary>
+        public void SendPackSpawn(string prefab, Vector3 position, Quaternion rotation)
+        {
+            if (string.IsNullOrEmpty(prefab))
+            {
+                return;
+            }
+
+            var data = AuroraWire.Build(w =>
+            {
+                w.Write(prefab);
+                w.Write(position.x);
+                w.Write(position.y);
+                w.Write(position.z);
+                w.Write(rotation.x);
+                w.Write(rotation.y);
+                w.Write(rotation.z);
+                w.Write(rotation.w);
+            });
+
+            Send(new AuroraNetMsg(AuroraMsgType.SpawnPack, LocalId, data));
         }
 
         public void RequestRoleChange(AuroraRoleId role)
