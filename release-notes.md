@@ -1,5 +1,8 @@
 # AuroraRP 1.0.0 — роль-плей мод для BONELAB
 
+![AuroraRP](https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-banner.jpg)
+
+
 ## Меню — на левой ладони (как меню RepUtils, но чище)
 
 - **Смотришь на левую ладонь — меню появляется само** (можно отключить: `palmAutoShow: false`).
@@ -14,8 +17,6 @@
 - Обновлена обложка проекта: бело-красная иконка 256×256 (`AuroraRP-icon.png`) и баннер
   (`AuroraRP-banner.jpg`).
 
-
-![AuroraRP](https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-banner.jpg)
 
 
 ## Исправление: меню не открывалось (сборка от 4 октября, позже первой)
