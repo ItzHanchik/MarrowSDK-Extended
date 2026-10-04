@@ -268,6 +268,19 @@ jobs:
             sha256sum out/* 2>/dev/null || true
             echo '```'
             echo
+            echo "## Проверка AuroraRP.dll"
+            echo '```'
+            if [ -f out/AuroraRP.dll ]; then
+              echo "размер: $(stat -c%s out/AuroraRP.dll) байт"
+              echo "тип:    $(file -b out/AuroraRP.dll)"
+              echo "класс AuroraPack в сборке: $(strings -a out/AuroraRP.dll | grep -c 'AuroraPack' || true)"
+              echo "встроенный пак aurorarp.pack: $(strings -a out/AuroraRP.dll | grep -c 'aurorarp.pack' || true)"
+              echo "ссылки на игровые сборки: $(strings -a out/AuroraRP.dll | grep -cE 'Il2CppSLZ|BoneLib' || true)"
+            else
+              echo "AuroraRP.dll нет"
+            fi
+            echo '```'
+            echo
             echo "## Лог сборки мода (последние 400 строк)"
             echo '```'
             tail -n 400 build_mod.log 2>/dev/null || echo "(сборка мода не запускалась)"
