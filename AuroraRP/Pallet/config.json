@@ -1,0 +1,79 @@
+{
+  "_about": "Конфиг AuroraRP, который едет ВНУТРИ палета. Всё, что здесь написано, работает у всех игроков без DLL-правок. Если хост хочет переопределить что-то только у себя — он создаёт такой же файл в MelonLoader/UserData/AuroraRP/config.json, и тот побеждает. Поле _about игра не читает, его можно не трогать.",
+
+  "language": "ru",
+  "menuScale": 1.0,
+  "wristHud": true,
+  "showRoleTags": true,
+  "haptics": true,
+  "sfxVolume": 0.7,
+  "menuOpenGesture": "both_triggers_double",
+  "doubleClickWindow": 0.55,
+
+  "startBalance": 5000,
+  "transferHoldSeconds": 5.0,
+  "transferHandDistance": 0.35,
+  "transferAutoConfirm": true,
+  "transferStepSmall": 100,
+  "transferStepBig": 1000,
+  "transferMax": 0,
+
+  "doorPrice": 2000,
+  "doorMaxPerPlayer": 1,
+  "doorPoliceForbidden": true,
+  "doorSellPresses": 3,
+  "doorSellPressWindow": 2.5,
+  "doorRefundPercent": 100,
+  "doorReleaseOnLeave": true,
+
+  "dealerMarkupPercent": 25,
+  "shopDealerOnly": true,
+  "requireWeaponLicense": false,
+  "dealerStarterKit": true,
+  "policeStarterKit": true,
+
+  "allowSelfRoleSelect": true,
+  "autoAssignCitizen": true,
+  "hitmanMaxCount": 1,
+  "roleChangeCost": 0,
+  "roleTagDistance": 25.0,
+
+  "robHoldSeconds": 4.0,
+  "robPercent": 20,
+  "robCooldown": 60.0,
+  "arrestsEnabled": true,
+  "arrestFine": 500,
+
+  "printerBarcode": "ItzHanchik.AuroraRP.Spawnable.MoneyPrinter",
+  "printerInterval": 30.0,
+  "printerPayout": 250,
+
+  "contentBarcode": "ItzHanchik.AuroraRP.Spawnable.MoneyPrinter",
+  "autoPullPallet": true,
+  "contentPullAttempts": 3,
+  "modioModId": 0,
+
+  "policeStarterKitBarcodes": [
+    "SLZ.Bonelab.Spawnable.AR15",
+    "SLZ.Bonelab.Spawnable.Glock17"
+  ],
+
+  "dealerStarterKitBarcodes": [
+    "SLZ.Bonelab.Spawnable.Glock17"
+  ],
+
+  "shopItems": [
+    { "title": "GLOCK-17",   "barcode": "SLZ.Bonelab.Spawnable.Glock17",      "category": 0, "price": 1500 },
+    { "title": "M1911",      "barcode": "SLZ.Bonelab.Spawnable.M1911",       "category": 0, "price": 1500 },
+    { "title": "Pistol (Pack)", "barcode": "hoodpack.pistol.pistol",         "category": 0, "price": 1500 },
+    { "title": "AR-15",      "barcode": "SLZ.Bonelab.Spawnable.AR15",        "category": 1, "price": 3000 },
+    { "title": "AK-Draco",   "barcode": "kazus.micropack.ak.draco",          "category": 1, "price": 3000 },
+    { "title": "MP5",        "barcode": "hoodpack.smg.mp5",                  "category": 1, "price": 3000 },
+    { "title": "Remington 870", "barcode": "hoodpack.shotgun.remington870",  "category": 2, "price": 3000 },
+    { "title": "SPAS-12",    "barcode": "kazus.micropack.spas12",            "category": 2, "price": 3000 },
+    { "title": "AWP",        "barcode": "hoodpack.sniper.awp",               "category": 3, "price": 4000 },
+    { "title": "SVD",        "barcode": "kazus.micropack.svd",               "category": 3, "price": 4000 },
+    { "title": "Отмычка",    "barcode": "aurora.illegal.lockpick",           "category": 4, "price": 800 },
+    { "title": "Маскировка", "barcode": "aurora.illegal.disguise",           "category": 4, "price": 1200 }
+  ]
+}

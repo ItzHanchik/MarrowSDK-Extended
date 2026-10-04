@@ -1,5 +1,5 @@
 {
-  "_readme": "Манифест автообновления AuroraRP. Читается плагином AuroraRPUpdater.dll из папки Plugins. После выпуска новой версии: загрузите AuroraRP.dll и палет-архив в GitHub Releases и обновите поля ниже. Поле pallet можно оставить пустым, если палет раздаётся только через mod.io.",
+  "_readme": "Манифест AuroraRP. Его читает плагин AuroraRPUpdater.dll (папка Plugins). Он качает свежий AuroraRP.dll в Mods, обновляет палет в MODS и доставляет моды, без которых AuroraRP не работает (BoneLib, LabFusion). После выпуска новой версии: приложите AuroraRP.dll и палет-архив к GitHub-релизу и обновите поля ниже.",
 
   "version": "1.0.0",
 
@@ -9,5 +9,27 @@
   "pallet": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-pallet-1.0.0.zip",
   "palletVersion": "1.0.0",
 
-  "notes": "Первый релиз AuroraRP: роли, экономика, двери, магазин, контракты, меню над рукой, Discord-банк."
+  "dependencies": [
+    {
+      "file": "BoneLib.dll",
+      "url": "https://github.com/yowchap/BoneLib/releases/download/v3.2.2/BoneLib.zip",
+      "zip": true,
+      "folder": "Mods",
+      "force": false
+    },
+    {
+      "file": "LabFusion.dll",
+      "url": "https://github.com/Lakatrazz/BONELAB-Fusion/releases/download/v1.14.2/LabFusion.dll",
+      "folder": "Mods",
+      "force": false
+    },
+    {
+      "file": "LabFusionUpdater.dll",
+      "url": "https://github.com/Lakatrazz/BONELAB-Fusion/releases/download/v1.14.2/LabFusionUpdater.dll",
+      "folder": "Plugins",
+      "force": false
+    }
+  ],
+
+  "notes": "Первый релиз AuroraRP: роли, экономика, двери, магазин, контракты, меню над рукой, Discord-банк. Конфиг системы едет внутри палета."
 }

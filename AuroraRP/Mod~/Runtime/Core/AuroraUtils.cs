@@ -35,6 +35,58 @@ namespace AuroraRP
 
         private static string _userData;
 
+        /// <summary>Папка палета AuroraRP в игре: ...\LocalLow\Stress Level Zero\BONELAB\MODS\AuroraRP</summary>
+        public static string PalletDirectory
+        {
+            get
+            {
+                if (_palletDir == null)
+                {
+                    try
+                    {
+                        // ...\AppData\Local -> ...\AppData\LocalLow
+                        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                        string appData = Path.GetDirectoryName(localAppData.TrimEnd(Path.DirectorySeparatorChar));
+
+                        if (!string.IsNullOrEmpty(appData))
+                        {
+                            string mods = Path.Combine(appData, "LocalLow", "Stress Level Zero", "BONELAB", "MODS");
+                            string pallet = Path.Combine(mods, "AuroraRP");
+
+                            if (Directory.Exists(pallet))
+                            {
+                                _palletDir = pallet;
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        _palletDir = null;
+                    }
+
+                    // Папки нет — не кэшируем, чтобы поймать её после докачки палета.
+                    return _palletDir;
+                }
+
+                return _palletDir;
+            }
+        }
+
+        private static string _palletDir;
+
+        /// <summary>
+        /// config.json внутри палета — «мозг» системы, который приезжает вместе с контентом.
+        /// Может отсутствовать: тогда работают дефолты из кода.
+        /// </summary>
+        public static string PalletConfigPath
+        {
+            get
+            {
+                string dir = PalletDirectory;
+                return string.IsNullOrEmpty(dir) ? null : Path.Combine(dir, "config.json");
+            }
+        }
+
         // ---------------------------------------------------------------- цвета
 
         public static Color Hex(string hex)

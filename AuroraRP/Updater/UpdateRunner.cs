@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using MelonLoader;
+using MelonLoader.Utils;
 
 namespace AuroraRPUpdater
 {
@@ -18,6 +19,31 @@ namespace AuroraRPUpdater
         public string pallet { get; set; }
         public string palletVersion { get; set; }
         public string notes { get; set; }
+
+        /// <summary>Другие моды, без которых AuroraRP не работает (BoneLib и т. п.).</summary>
+        public DependencyEntry[] dependencies { get; set; }
+    }
+
+    /// <summary>Одна зависимость: файл, ссылка и куда его класть.</summary>
+    public sealed class DependencyEntry
+    {
+        /// <summary>Имя файла, например BoneLib.dll.</summary>
+        public string file { get; set; }
+
+        /// <summary>Прямая ссылка на dll.</summary>
+        public string url { get; set; }
+
+        /// <summary>Необязательная сумма sha256.</summary>
+        public string sha256 { get; set; }
+
+        /// <summary>"Mods" (по умолчанию) или "Plugins".</summary>
+        public string folder { get; set; }
+
+        /// <summary>Перекачивать, даже если файл уже есть.</summary>
+        public bool force { get; set; }
+
+        /// <summary>По ссылке лежит zip (например, релиз BoneLib): распакуем нужный файл.</summary>
+        public bool zip { get; set; }
     }
 
     /// <summary>
@@ -44,7 +70,7 @@ namespace AuroraRPUpdater
             return client;
         }
 
-        public void Run(string manifestUrl, bool installPallet)
+        public void Run(string manifestUrl, bool installPallet, bool installDependencies = true)
         {
             if (string.IsNullOrWhiteSpace(manifestUrl))
             {
@@ -58,6 +84,11 @@ namespace AuroraRPUpdater
             }
 
             UpdateMod(manifest);
+
+            if (installDependencies)
+            {
+                InstallDependencies(manifest);
+            }
 
             if (installPallet)
             {
@@ -157,6 +188,170 @@ namespace AuroraRPUpdater
             {
                 _log.Error("Не удалось записать AuroraRP.dll (" + target + "): " + e.Message);
                 TryDelete(temp);
+            }
+        }
+
+        // --------------------------------------------------------------- зависимости
+
+        /// <summary>
+        /// Ставит моды, без которых AuroraRP не запустится (BoneLib и т. п.),
+        /// чтобы игроку вообще ничего не приходилось раскладывать руками.
+        /// </summary>
+        private void InstallDependencies(UpdateManifest manifest)
+        {
+            if (manifest.dependencies == null || manifest.dependencies.Length == 0)
+            {
+                return;
+            }
+
+            foreach (var dep in manifest.dependencies)
+            {
+                if (dep == null || string.IsNullOrWhiteSpace(dep.file) || string.IsNullOrWhiteSpace(dep.url))
+                {
+                    continue;
+                }
+
+                string target = Path.Combine(TargetDirectory(dep), dep.file);
+
+                if (File.Exists(target) && !dep.force)
+                {
+                    _log.Msg("Зависимость {0} уже на месте.", dep.file);
+                    continue;
+                }
+
+                if (dep.zip)
+                {
+                    InstallFromZip(dep);
+                }
+                else
+                {
+                    InstallFile(dep.url, target, dep.sha256, dep.file);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ставит зависимость из zip-архива: берёт файл dep.file и всё, что в архиве
+        /// лежит в папках Mods/ или Plugins/ (так устроены релизы BoneLib).
+        /// </summary>
+        private void InstallFromZip(DependencyEntry dep)
+        {
+            string tempZip = Path.Combine(Path.GetTempPath(), "AuroraRP_dep_" + Guid.NewGuid().ToString("N") + ".zip");
+
+            try
+            {
+                _log.Msg("Качаю {0} (архив)...", dep.file);
+                byte[] bytes = Http.GetByteArrayAsync(dep.url).GetAwaiter().GetResult();
+
+                if (bytes.Length < 1024)
+                {
+                    _log.Error("Архив для {0} подозрительно маленький ({1} байт), пропускаю.", dep.file, bytes.Length);
+                    return;
+                }
+
+                File.WriteAllBytes(tempZip, bytes);
+
+                bool found = false;
+
+                using (var archive = ZipFile.OpenRead(tempZip))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (string.IsNullOrEmpty(entry.Name))
+                        {
+                            continue;
+                        }
+
+                        string fromFolder = FolderFromArchive(entry.FullName);
+                        bool wanted = string.Equals(entry.Name, dep.file, StringComparison.OrdinalIgnoreCase);
+
+                        if (!wanted && fromFolder == null)
+                        {
+                            continue;
+                        }
+
+                        string directory = fromFolder == "Plugins"
+                            ? MelonEnvironment.PluginsDirectory
+                            : fromFolder == "Mods"
+                                ? MelonEnvironment.ModsDirectory
+                                : TargetDirectory(dep);
+
+                        string target = Path.Combine(directory, entry.Name);
+                        Directory.CreateDirectory(directory);
+                        entry.ExtractToFile(target, true);
+                        found |= wanted;
+                        _log.Msg("{0} установлен: {1}", entry.Name, target);
+                    }
+                }
+
+                if (!found)
+                {
+                    _log.Error("В архиве не нашёл " + dep.file + " — поставьте его вручную.");
+                }
+            }
+            catch (Exception e)
+            {
+                _log.Error("Не удалось поставить " + dep.file + " из архива: " + e.Message);
+            }
+            finally
+            {
+                TryDelete(tempZip);
+            }
+        }
+
+        private static string FolderFromArchive(string fullName)
+        {
+            string normalized = (fullName ?? string.Empty).Replace('\\', '/');
+
+            if (normalized.StartsWith("Plugins/", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Plugins";
+            }
+
+            if (normalized.StartsWith("Mods/", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Mods";
+            }
+
+            return null;
+        }
+
+        private static string TargetDirectory(DependencyEntry dep)
+        {
+            return "Plugins".Equals(dep.folder, StringComparison.OrdinalIgnoreCase)
+                ? MelonEnvironment.PluginsDirectory
+                : MelonEnvironment.ModsDirectory;
+        }
+
+        private void InstallFile(string url, string target, string sha256, string what)
+        {
+            try
+            {
+                _log.Msg("Качаю {0}...", what);
+                byte[] bytes = Http.GetByteArrayAsync(url).GetAwaiter().GetResult();
+
+                if (bytes.Length < 1024)
+                {
+                    _log.Error("Файл {0} подозрительно маленький ({1} байт), пропускаю.", what, bytes.Length);
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(sha256) && !HashMatches(bytes, sha256.Trim()))
+                {
+                    _log.Error("У файла {0} не сошлась контрольная сумма (sha256). Пропускаю.", what);
+                    return;
+                }
+
+                string temp = target + ".new";
+                Directory.CreateDirectory(Path.GetDirectoryName(target) ?? ".");
+                File.WriteAllBytes(temp, bytes);
+                File.Copy(temp, target, true);
+                File.Delete(temp);
+                _log.Msg("{0} установлен: {1}", what, target);
+            }
+            catch (Exception e)
+            {
+                _log.Error("Не удалось установить " + what + ": " + e.Message);
             }
         }
 
@@ -303,6 +498,8 @@ namespace AuroraRPUpdater
                     return;
                 }
 
+                PreservePalletConfig(targetDir);
+
                 if (Directory.Exists(targetDir))
                 {
                     Directory.Delete(targetDir, true);
@@ -336,6 +533,39 @@ namespace AuroraRPUpdater
                 catch (Exception)
                 {
                 }
+            }
+        }
+
+        /// <summary>
+        /// Конфиг AuroraRP едет внутри палета. Если хост правил его прямо там —
+        /// переносим файл в UserData, чтобы обновление палета не стёрло настройки.
+        /// </summary>
+        private void PreservePalletConfig(string palletDir)
+        {
+            try
+            {
+                string palletConfig = Path.Combine(palletDir, "config.json");
+
+                if (!File.Exists(palletConfig))
+                {
+                    return;
+                }
+
+                string userDir = Path.Combine(MelonEnvironment.UserDataDirectory, "AuroraRP");
+                string userConfig = Path.Combine(userDir, "config.json");
+
+                if (File.Exists(userConfig))
+                {
+                    return;
+                }
+
+                Directory.CreateDirectory(userDir);
+                File.Copy(palletConfig, userConfig, true);
+                _log.Msg("Сохранил твой config.json в UserData\\AuroraRP (он перекрывает палетный).");
+            }
+            catch (Exception e)
+            {
+                _log.Warning("Не удалось сохранить config.json перед обновлением палета: " + e.Message);
             }
         }
 

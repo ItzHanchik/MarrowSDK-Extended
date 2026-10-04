@@ -17,8 +17,8 @@ namespace AuroraRPUpdater
     /// <summary>
     /// MelonLoader-ПЛАГИН (папка Plugins) — загружается раньше модов, поэтому
     /// успевает положить свежий AuroraRP.dll в папку Mods до его загрузки.
-    /// Игроку достаточно один раз поставить этот файл: дальше и код мода,
-    /// и палет с контентом обновляются сами.
+    /// Игроку достаточно один раз поставить этот файл: дальше код мода, палет
+    /// с контентом и моды-зависимости (BoneLib, LabFusion) ставятся и обновляются сами.
     /// </summary>
     public class AuroraRpUpdaterPlugin : MelonPlugin
     {
@@ -41,6 +41,7 @@ namespace AuroraRPUpdater
         private MelonPreferences_Entry<bool> _autoUpdate;
         private MelonPreferences_Entry<string> _manifestUrl;
         private MelonPreferences_Entry<bool> _installPallet;
+        private MelonPreferences_Entry<bool> _installDependencies;
 
         public override void OnPreInitialization()
         {
@@ -51,6 +52,7 @@ namespace AuroraRPUpdater
             _autoUpdate = _prefs.CreateEntry("AutoUpdate", true);
             _manifestUrl = _prefs.CreateEntry("ManifestUrl", DefaultManifestUrl);
             _installPallet = _prefs.CreateEntry("InstallPallet", true);
+            _installDependencies = _prefs.CreateEntry("InstallDependencies", true);
             _prefs.SaveToFile(false);
 
             Log.Msg("AuroraRP Updater v{0}. Папка Mods: {1}", PluginVersion, MelonEnvironment.ModsDirectory);
@@ -64,7 +66,7 @@ namespace AuroraRPUpdater
             try
             {
                 var runner = new UpdateRunner(Log);
-                runner.Run(_manifestUrl.Value, _installPallet.Value);
+                runner.Run(_manifestUrl.Value, _installPallet.Value, _installDependencies.Value);
             }
             catch (Exception e)
             {

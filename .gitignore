@@ -4,7 +4,9 @@ AuroraRP/Mod~/obj/
 AuroraRP/Updater/bin/
 AuroraRP/Updater/obj/
 AuroraRP/Builds/
-AuroraRP/Pallet/
+# Собранный палет — артефакт; в репозитории нужен только конфиг системы
+AuroraRP/Pallet/*
+!AuroraRP/Pallet/config.json
 AuroraRP/Thunderstore/AuroraRP.dll
 AuroraRP/Thunderstore/*.zip
 *.zip

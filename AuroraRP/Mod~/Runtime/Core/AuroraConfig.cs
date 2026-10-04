@@ -6,7 +6,9 @@ using UnityEngine;
 namespace AuroraRP
 {
     /// <summary>
-    /// Конфиг мода. Лежит в MelonLoader/UserData/AuroraRP/config.json и создаётся при первом запуске.
+    /// Конфиг мода. Основной файл лежит в палете (MODS\AuroraRP\config.json) — то есть
+    /// «система» приезжает к игрокам вместе с контентом. Личный файл хоста
+    /// (MelonLoader/UserData/AuroraRP/config.json) создаётся при правках и перекрывает палетный.
     /// Здесь же — дефолтный каталог оружия: barcode'ы берутся из паков (Hoodpack, Kazus Micropack и др.).
     /// </summary>
     [Serializable]
@@ -242,12 +244,46 @@ namespace AuroraRP
 
         public static void Load()
         {
+            AuroraConfig cfg = null;
+            bool loaded = false;
+
+            // 1) Конфиг из палета: приезжает вместе с контентом, работает у всех.
+            try
+            {
+                string palletPath = AuroraUtils.PalletConfigPath;
+
+                if (!string.IsNullOrEmpty(palletPath) && File.Exists(palletPath))
+                {
+                    cfg = JsonUtility.FromJson<AuroraConfig>(File.ReadAllText(palletPath));
+
+                    if (cfg != null)
+                    {
+                        loaded = true;
+                        AuroraLog.Info("Конфиг взят из палета: " + palletPath);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "pallet config load");
+            }
+
+            // 2) Личный конфиг хоста (UserData) перекрывает палетный целиком.
             try
             {
                 if (File.Exists(FilePath))
                 {
-                    string json = File.ReadAllText(FilePath);
-                    _current = JsonUtility.FromJson<AuroraConfig>(json);
+                    var user = JsonUtility.FromJson<AuroraConfig>(File.ReadAllText(FilePath));
+
+                    if (user != null)
+                    {
+                        bool wasPallet = loaded;
+                        cfg = user;
+                        loaded = true;
+                        AuroraLog.Info(wasPallet
+                            ? "Личный конфиг UserData перекрыл палетный."
+                            : "Конфиг взят из UserData.");
+                    }
                 }
             }
             catch (Exception e)
@@ -255,9 +291,11 @@ namespace AuroraRP
                 AuroraLog.Exception(e, "config load");
             }
 
-            if (_current == null)
+            _current = cfg ?? new AuroraConfig();
+
+            // Ничего не нашли — создаём личный конфиг, как раньше.
+            if (!loaded)
             {
-                _current = new AuroraConfig();
                 Save();
             }
 

@@ -93,6 +93,16 @@ namespace AuroraRP.EditorTools
                 string palletFolder = AddressablesManager.EvaluateProfileValueBuildPathForPallet(pallet, AddressablesManager.ProfilePalletID);
                 report.AppendLine("• Собранный палет: " + palletFolder);
 
+                // Кладём конфиг внутрь палета: вся «система» едет вместе с контентом.
+                if (CopyPalletConfig(palletFolder, out string configMessage))
+                {
+                    report.AppendLine("• " + configMessage);
+                }
+                else
+                {
+                    report.AppendLine("• ВНИМАНИЕ: " + configMessage);
+                }
+
                 // ---- 6. Установка в игру --------------------------------------------------
                 EditorUtility.DisplayProgressBar("AuroraRP", "Устанавливаю в BONELAB...", 0.8f);
                 AuroraRpSetup.InstallToMods(palletFolder, out string installMessage);
@@ -227,6 +237,39 @@ namespace AuroraRP.EditorTools
         }
 
         /// <summary>
+        /// Копирует Assets/AuroraRP/Pallet/config.json в собранный палет.
+        /// Этот файл — «мозг» системы: роли, цены, лимиты, стартовые наборы, магазин.
+        /// </summary>
+        public static bool CopyPalletConfig(string palletFolder, out string message)
+        {
+            string source = Path.Combine(AuroraRpPaths.PalletRoot, "config.json");
+
+            if (!File.Exists(source))
+            {
+                message = "нет файла Assets/AuroraRP/Pallet/config.json — палет поедет без конфига.";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(palletFolder) || !Directory.Exists(palletFolder))
+            {
+                message = "не нашёл папку собранного палета: " + palletFolder;
+                return false;
+            }
+
+            try
+            {
+                File.Copy(source, Path.Combine(palletFolder, "config.json"), true);
+                message = "config.json положен в палет (настройки поедут к игрокам).";
+                return true;
+            }
+            catch (Exception e)
+            {
+                message = "не удалось положить config.json в палет: " + e.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Палет-архив для загрузки на mod.io и для автообновления (pallet.json — в корне архива).
         /// </summary>
         public static string CreatePalletZip(string palletFolder)
@@ -270,6 +313,8 @@ namespace AuroraRP.EditorTools
                     "Не нашёл собранный палет: " + palletFolder + "\nСначала нажмите «СОБРАТЬ ВСЁ».", "Ок");
                 return;
             }
+
+            CopyPalletConfig(palletFolder, out _);
 
             string zip = CreatePalletZip(palletFolder);
             EditorUtility.DisplayDialog("AuroraRP",
