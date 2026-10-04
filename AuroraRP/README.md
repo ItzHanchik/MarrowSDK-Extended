@@ -88,7 +88,9 @@ AuroraRP добавляет в BONELAB (PC / MelonLoader) систему рол�
 | **Хост** | MelonLoader + BoneLib + `AuroraRP.dll` | вручную / через менеджер модов |
 | **Хост** | Палет `AuroraRP` с mod.io | внутриигровой браузер mod.io (Mods → AuroraRP → Subscribe) |
 | **Игрок** | MelonLoader + BoneLib + `AuroraRP.dll` | вручную / Thunderstore (в один клик через Gale/r2modman) |
+| **Игрок** | `AuroraRPUpdater.dll` (плагин, один раз) | из того же архива/пакета, кладётся в `Plugins` |
 | **Игрок** | Палет `AuroraRP` | **сам, ничего делать не надо** — Fusion скачает его с mod.io, как только хост заспавнит предмет мода |
+| **Игрок** | Обновления мода и палета | **сами**, плагином `AuroraRPUpdater` (см. ниже) |
 
 Что делает мод:
 
@@ -107,6 +109,40 @@ AuroraRP добавляет в BONELAB (PC / MelonLoader) систему рол�
 > обойти его нельзя. Поэтому выкладывайте DLL на **Thunderstore** (там один клик через
 > Gale/r2modman или мод ThunderstoreModAssistant прямо в игре) и/или на mod.io как файл,
 > а палет — на mod.io (Subscribe в игре).
+
+### Что лежит в палете, а что в DLL
+
+| | Палет (контент) | DLL (код) |
+|---|---|---|
+| Терминал AuroraTerminal, принтер денег | ✅ модели и префабы | — (оживляет их код в рантайме) |
+| Роли, деньги, переводы, двери, магазин, контракты | — | ✅ |
+| VR-меню, таблички над игроками, звуки, Discord-банк | — | ✅ |
+| Настройка цен/лимитов | через `config.json` | ✅ |
+
+Палет физически не может исполнять код (это контейнер ассетов), поэтому «вся система в палете»
+не бывает ни у нас, ни у любого другого мода BONELAB. Зато теперь **и палет, и код доставляются
+и обновляются автоматически** — игроку не нужно следить за версиями.
+
+## Автообновление (AuroraRPUpdater)
+
+`AuroraRPUpdater.dll` — маленький **MelonLoader-плагин** (папка `BONELAB\Plugins`).
+Он загружается раньше модов и перед запуском игры:
+
+1. читает манифест `update.json` из репозитория;
+2. если `AuroraRP.dll` старее — скачивает свежий в папку `Mods` (мод работает в этом же запуске);
+3. если включено `InstallPallet` — обновляет и палет в `MODS` игры.
+
+То есть игрок ставит плагин **один раз**, а дальше и код, и контент живут своей жизнью.
+Настройки — `UserData\MelonPreferences.cfg`, категория `AuroraRPUpdater`:
+
+| Ключ | По умолчанию | Что делает |
+|---|---|---|
+| `AutoUpdate` | `true` | включить автообновление |
+| `ManifestUrl` | адрес `update.json` в репозитории | откуда брать версии |
+| `InstallPallet` | `true` | обновлять вместе с кодом и палет |
+
+Плагин ничего не ломает: при любой ошибке (нет интернета, кривой манифест) он просто пишет
+предупреждение в консоль MelonLoader и игра запускается как обычно.
 
 ## Установка (для игроков)
 
@@ -213,9 +249,12 @@ dotnet build AuroraRP.csproj -c Release -o bin -p:BonelabDir="C:\Program Files (
 
 ## Файлы для публикации
 
-- `Docs/PUBLISHING.md` — пошагово: палет на mod.io (и `modioModId`), DLL на Thunderstore;
+- `Docs/PUBLISHING.md` — пошагово: палет на mod.io (и `modioModId`), DLL на Thunderstore,
+  выпуск обновлений через `update.json`;
 - `Thunderstore/` — готовый пакет для Thunderstore: `manifest.json`, текст страницы,
-  иконка и скрипт `pack_thunderstore.cmd|sh` (собирает `Builds/AuroraRP-Thunderstore-<версия>.zip`).
+  иконка и скрипт `pack_thunderstore.cmd|sh` (собирает `Builds/AuroraRP-Thunderstore-<версия>.zip`);
+- `Updater/` — исходники плагина автообновления `AuroraRPUpdater.dll` (ставится в `Plugins`);
+- `update.json` — манифест обновлений: версия, ссылка на `AuroraRP.dll` и версия палета.
 
 ## Частые вопросы
 

@@ -1,0 +1,13 @@
+{
+  "_readme": "Манифест автообновления AuroraRP. Читается плагином AuroraRPUpdater.dll из папки Plugins. После выпуска новой версии: загрузите AuroraRP.dll и палет-архив в GitHub Releases и обновите поля ниже. Поле pallet можно оставить пустым, если палет раздаётся только через mod.io.",
+
+  "version": "1.0.0",
+
+  "dll": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP.dll",
+  "dllSha256": "",
+
+  "pallet": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-pallet-1.0.0.zip",
+  "palletVersion": "1.0.0",
+
+  "notes": "Первый релиз AuroraRP: роли, экономика, двери, магазин, контракты, меню над рукой, Discord-банк."
+}

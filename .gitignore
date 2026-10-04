@@ -1,6 +1,8 @@
 # === AuroraRP ===
 AuroraRP/Mod~/bin/
 AuroraRP/Mod~/obj/
+AuroraRP/Updater/bin/
+AuroraRP/Updater/obj/
 AuroraRP/Builds/
 AuroraRP/Pallet/
 AuroraRP/Thunderstore/AuroraRP.dll

@@ -128,6 +128,10 @@ namespace AuroraRP.EditorTools
             }
         }
 
+        /// <summary>
+        /// Папка контента игры (палеты): %USERPROFILE%\AppData\LocalLow\Stress Level Zero\BONELAB\MODS.
+        /// ВНИМАНИЕ: DLL мода сюда НЕ кладётся — для неё есть GameModsFolder.
+        /// </summary>
         public static string ModsFolder
         {
             get
@@ -144,11 +148,57 @@ namespace AuroraRP.EditorTools
             }
         }
 
+        /// <summary>Папка code-модов (MelonLoader) в установке игры: &lt;BONELAB&gt;\Mods.</summary>
+        public static string GameModsFolder
+        {
+            get
+            {
+                string game = BonelabPath;
+                return string.IsNullOrEmpty(game) ? string.Empty : Path.Combine(game, "Mods");
+            }
+        }
+
+        /// <summary>Папка MelonLoader-плагинов: &lt;BONELAB&gt;\Plugins.</summary>
+        public static string PluginsFolder
+        {
+            get
+            {
+                string game = BonelabPath;
+                return string.IsNullOrEmpty(game) ? string.Empty : Path.Combine(game, "Plugins");
+            }
+        }
+
+        // ------------------------------------------------------------- апдейтер
+
+        /// <summary>Папка с исходниками AuroraRPUpdater (Assets/AuroraRP/Updater).</summary>
+        public static string UpdaterRoot
+        {
+            get
+            {
+                string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Application.dataPath;
+                return Path.Combine(projectRoot, "Assets", "AuroraRP", "Updater");
+            }
+        }
+
+        public static string UpdaterCsproj => Path.Combine(UpdaterRoot, "AuroraRPUpdater.csproj");
+
+        public static string UpdaterDllOutput => Path.Combine(UpdaterRoot, "bin", "AuroraRPUpdater.dll");
+
+        /// <summary>Манифест обновлений, который читает апдейтер (Assets/AuroraRP/update.json).</summary>
+        public static string UpdateManifestFile
+        {
+            get
+            {
+                string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Application.dataPath;
+                return Path.Combine(projectRoot, "Assets", "AuroraRP", "update.json");
+            }
+        }
+
         public static string LabFusionPath
         {
             get
             {
-                string mods = ModsFolder;
+                string mods = GameModsFolder;
                 if (string.IsNullOrEmpty(mods))
                 {
                     return string.Empty;
@@ -177,7 +227,7 @@ namespace AuroraRP.EditorTools
         {
             get
             {
-                string mods = ModsFolder;
+                string mods = GameModsFolder;
                 if (string.IsNullOrEmpty(mods))
                 {
                     return string.Empty;

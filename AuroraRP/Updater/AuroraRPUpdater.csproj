@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AuroraRPUpdater — маленький MelonLoader-плагин (папка BONELAB\Plugins).
+
+    Что делает: до загрузки модов скачивает свежий AuroraRP.dll в папку Mods
+    (и, если включено, палет с контентом) — так игрокам не нужно ничего
+    обновлять руками.
+
+    Сборка:
+        dotnet build AuroraRPUpdater.csproj -c Release -o bin
+        dotnet build AuroraRPUpdater.csproj -c Release -o bin -p:BonelabDir="D:\Games\BONELAB"
+
+    Il2CppAssemblies для плагина НЕ нужны — он работает с файлами и сетью.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>AuroraRPUpdater</AssemblyName>
+    <RootNamespace>AuroraRPUpdater</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>none</DebugType>
+    <NoWarn>CS0169;CS0649;CS0162;CS0414</NoWarn>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <BonelabDir Condition="'$(BonelabDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\BONELAB</BonelabDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(BonelabDir)\MelonLoader\*.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(BonelabDir)\MelonLoader\net6\*.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="AuroraUpdaterCheckPaths" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(BonelabDir)\MelonLoader')"
+           Text="Не найдена папка $(BonelabDir)\MelonLoader. Укажите игру: dotnet build AuroraRPUpdater.csproj -c Release -o bin -p:BonelabDir=&quot;ПУТЬ\К\BONELAB&quot;" />
+  </Target>
+
+</Project>

@@ -60,13 +60,23 @@ namespace AuroraRP.EditorTools
                     }
                 }
 
-                // ---- 3. Контент палета ----------------------------------------------------
+                // ---- 3. Апдейтер (плагин автообновления) ---------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю AuroraRPUpdater.dll (автообновление)...", 0.4f);
+                bool updaterOk = AuroraRpSetup.BuildUpdaterDll(out string updaterLog);
+                report.AppendLine(updaterOk ? "• Апдейтер: собран" : "• Апдейтер: НЕ собран");
+
+                if (!updaterOk)
+                {
+                    Debug.LogWarning("[AuroraRP] Сборка апдейтера не удалась:\n" + updaterLog);
+                }
+
+                // ---- 4. Контент палета ----------------------------------------------------
                 EditorUtility.DisplayProgressBar("AuroraRP", "Создаю контент палета...", 0.45f);
                 AuroraRpContent.CreateContent();
                 var pallet = AuroraRpContent.GetOrCreatePallet();
                 report.AppendLine("• Палет: " + AssetDatabase.GetAssetPath(pallet));
 
-                // ---- 4. Упаковка палета ---------------------------------------------------
+                // ---- 5. Упаковка палета ---------------------------------------------------
                 EditorUtility.DisplayProgressBar("AuroraRP", "Упаковываю палет (Addressables)...", 0.6f);
                 bool packed = PalletPackerEditor.PackPallet(pallet, out var packResult, false, false);
 
@@ -83,7 +93,7 @@ namespace AuroraRP.EditorTools
                 string palletFolder = AddressablesManager.EvaluateProfileValueBuildPathForPallet(pallet, AddressablesManager.ProfilePalletID);
                 report.AppendLine("• Собранный палет: " + palletFolder);
 
-                // ---- 5. Установка в игру --------------------------------------------------
+                // ---- 6. Установка в игру --------------------------------------------------
                 EditorUtility.DisplayProgressBar("AuroraRP", "Устанавливаю в BONELAB...", 0.8f);
                 AuroraRpSetup.InstallToMods(palletFolder, out string installMessage);
                 report.AppendLine("• " + installMessage);
@@ -100,10 +110,16 @@ namespace AuroraRP.EditorTools
                     }
                 }
 
-                // ---- 6. Архив для релиза --------------------------------------------------
-                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю архив...", 0.9f);
+                // ---- 7. Архивы для релиза -------------------------------------------------
+                EditorUtility.DisplayProgressBar("AuroraRP", "Собираю архивы...", 0.9f);
                 string zipPath = CreateReleaseZip(palletFolder, dllSource);
-                report.AppendLine("• Архив: " + zipPath);
+                report.AppendLine("• Архив для игроков: " + zipPath);
+
+                string palletZip = CreatePalletZip(palletFolder);
+                if (palletZip != null)
+                {
+                    report.AppendLine("• Палет для mod.io/автообновления: " + palletZip);
+                }
 
                 EditorUtility.ClearProgressBar();
 
@@ -168,10 +184,18 @@ namespace AuroraRP.EditorTools
 
             Directory.CreateDirectory(staging);
 
-            // Архив содержит: AuroraRP.dll + палет + инструкцию.
+            // Архив содержит: AuroraRP.dll + палет + апдейтер + инструкцию.
             if (File.Exists(dllPath))
             {
                 File.Copy(dllPath, Path.Combine(staging, "AuroraRP.dll"), true);
+            }
+
+            string updaterDll = AuroraRpPaths.UpdaterDllOutput;
+            if (File.Exists(updaterDll))
+            {
+                string plugins = Path.Combine(staging, "Plugins");
+                Directory.CreateDirectory(plugins);
+                File.Copy(updaterDll, Path.Combine(plugins, "AuroraRPUpdater.dll"), true);
             }
 
             if (Directory.Exists(palletFolder))
@@ -183,9 +207,14 @@ namespace AuroraRP.EditorTools
             File.WriteAllText(Path.Combine(staging, "ПРОЧТИ_МЕНЯ.txt"),
                 "AuroraRP " + AuroraRpPaths.ModVersion + " — установка:\r\n" +
                 "\r\n" +
-                "1) AuroraRP.dll положить в  <BONELAB>\\Mods\r\n" +
-                "2) папку из Mods\\... (палет) положить в  %USERPROFILE%\\AppData\\LocalLow\\Stress Level Zero\\BONELAB\\MODS\r\n" +
-                "3) В игре: двойное нажатие обоих триггеров — меню. B — двери. X — перевод денег.\r\n" +
+                "БЫСТРАЯ (рекомендуется):\r\n" +
+                "1) AuroraRP.dll            -> в  <BONELAB>\\Mods\r\n" +
+                "2) Plugins\\AuroraRPUpdater.dll -> в  <BONELAB>\\Plugins   (один раз!)\r\n" +
+                "   Дальше сам следит за обновлениями AuroraRP.dll и палета.\r\n" +
+                "3) папку из Mods\\... (палет) -> в  %USERPROFILE%\\AppData\\LocalLow\\Stress Level Zero\\BONELAB\\MODS\r\n" +
+                "   (можно и не копировать: палет скачается сам с mod.io)\r\n" +
+                "\r\n" +
+                "ИГРА: двойное нажатие обоих триггеров — меню. B — двери. X — перевод денег.\r\n" +
                 "\r\n" +
                 "Требуется: MelonLoader 0.6.x и BoneLib.\r\n" +
                 "Мультиплеер (LabFusion) поддерживается, если LabFusion установлен.\r\n",
@@ -195,6 +224,57 @@ namespace AuroraRP.EditorTools
             Directory.Delete(staging, true);
 
             return zipPath;
+        }
+
+        /// <summary>
+        /// Палет-архив для загрузки на mod.io и для автообновления (pallet.json — в корне архива).
+        /// </summary>
+        public static string CreatePalletZip(string palletFolder)
+        {
+            if (string.IsNullOrEmpty(palletFolder) || !Directory.Exists(palletFolder))
+            {
+                return null;
+            }
+
+            string output = AuroraRpPaths.BuildOutput;
+            Directory.CreateDirectory(output);
+
+            string name = AuroraRpPaths.PalletTitle + "-pallet-" + AuroraRpPaths.ModVersion;
+            string zipPath = Path.Combine(output, name + ".zip");
+
+            if (File.Exists(zipPath))
+            {
+                File.Delete(zipPath);
+            }
+
+            try
+            {
+                ZipFile.CreateFromDirectory(palletFolder, zipPath, CompressionLevel.Optimal, false);
+                return zipPath;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[AuroraRP] Не удалось собрать палет-архив: " + e.Message);
+                return null;
+            }
+        }
+
+        [MenuItem("AuroraRP/6. Собрать палет-архив (для mod.io и автообновления)", false, 22)]
+        public static void BuildPalletZipOnly()
+        {
+            string palletFolder = Path.Combine(AuroraRpPaths.PalletRoot, "ServerData", "StandaloneWindows64");
+
+            if (!Directory.Exists(palletFolder))
+            {
+                EditorUtility.DisplayDialog("AuroraRP",
+                    "Не нашёл собранный палет: " + palletFolder + "\nСначала нажмите «СОБРАТЬ ВСЁ».", "Ок");
+                return;
+            }
+
+            string zip = CreatePalletZip(palletFolder);
+            EditorUtility.DisplayDialog("AuroraRP",
+                zip != null ? ("Готово:\n" + zip + "\n\nЗагрузите его на mod.io и приложите к GitHub-релизу.") : "Не удалось собрать архив.",
+                "Ок");
         }
 
         private static string Trim(string text, int max)

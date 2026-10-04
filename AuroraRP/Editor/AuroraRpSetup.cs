@@ -187,6 +187,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+if exist ""..\Updater\AuroraRPUpdater.csproj"" (
+  pushd ""..\Updater""
+  echo === AuroraRPUpdater: сборка автообновления ===
+  dotnet build AuroraRPUpdater.csproj -c Release -o bin
+  popd
+)
 echo.
 echo Готово: {Path.Combine(modRoot, "bin", "AuroraRP.dll")}
 echo Скопируйте AuroraRP.dll в папку MODS игры (меню AuroraRP в Unity сделает это сам).
@@ -198,6 +204,10 @@ pause
 set -e
 cd ""$(dirname ""$0"")""
 dotnet build AuroraRP.csproj -c Release -o bin
+if [ -f ../Updater/AuroraRPUpdater.csproj ]; then
+  echo ""=== AuroraRPUpdater: сборка автообновления ===""
+  (cd ../Updater && dotnet build AuroraRPUpdater.csproj -c Release -o bin)
+fi
 echo ""Готово: $(pwd)/bin/AuroraRP.dll""
 ";
 
@@ -250,41 +260,106 @@ echo ""Готово: $(pwd)/bin/AuroraRP.dll""
             }
         }
 
-        /// <summary>Копирует DLL и палет в папку MODS игры.</summary>
-        public static bool InstallToMods(string palletFolder, out string message)
+        /// <summary>Собирает AuroraRPUpdater.dll (MelonLoader-плагин автообновления).</summary>
+        public static bool BuildUpdaterDll(out string log)
         {
-            message = string.Empty;
-            string mods = AuroraRpPaths.ModsFolder;
+            log = string.Empty;
 
-            if (string.IsNullOrEmpty(mods))
+            if (!Directory.Exists(AuroraRpPaths.UpdaterRoot) || !File.Exists(AuroraRpPaths.UpdaterCsproj))
             {
-                message = "Папка MODS не найдена. Скопируйте файлы вручную.";
+                log = "Не найден проект апдейтера: " + AuroraRpPaths.UpdaterCsproj;
                 return false;
             }
 
             try
             {
-                Directory.CreateDirectory(mods);
-
-                string dll = AuroraRpPaths.DllOutput;
-                if (File.Exists(dll))
+                var startInfo = new ProcessStartInfo
                 {
-                    File.Copy(dll, Path.Combine(mods, "AuroraRP.dll"), true);
+                    FileName = AuroraRpPaths.DotnetExecutable,
+                    Arguments = "-c Release -o bin \"AuroraRPUpdater.csproj\" -p:BonelabDir=\"" + AuroraRpPaths.BonelabPath + "\"",
+                    WorkingDirectory = AuroraRpPaths.UpdaterRoot,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null)
+                {
+                    log = "Не удалось запустить dotnet. Установите .NET SDK 6+.";
+                    return false;
                 }
 
-                if (!string.IsNullOrEmpty(palletFolder) && Directory.Exists(palletFolder))
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                log = stdout + "\n" + stderr;
+                return process.ExitCode == 0 && File.Exists(AuroraRpPaths.UpdaterDllOutput);
+            }
+            catch (Exception e)
+            {
+                log = "Ошибка сборки апдейтера: " + e.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Устанавливает мод в игру: палет — в MODS (контент), DLL — в &lt;BONELAB&gt;\Mods (код),
+        /// апдейтер — в &lt;BONELAB&gt;\Plugins.
+        /// </summary>
+        public static bool InstallToMods(string palletFolder, out string message)
+        {
+            message = string.Empty;
+            string palletMods = AuroraRpPaths.ModsFolder;   // LocalLow\...\BONELAB\MODS — контент
+            string gameMods = AuroraRpPaths.GameModsFolder; // <BONELAB>\Mods — code-моды
+
+            if (string.IsNullOrEmpty(palletMods) && string.IsNullOrEmpty(gameMods))
+            {
+                message = "Папки игры не найдены. Скопируйте файлы вручную.";
+                return false;
+            }
+
+            try
+            {
+                var report = new System.Text.StringBuilder();
+
+                // 1) DLL мода — только в папку code-модов игры.
+                string dll = AuroraRpPaths.DllOutput;
+                if (File.Exists(dll) && !string.IsNullOrEmpty(gameMods))
                 {
-                    string target = Path.Combine(mods, Path.GetFileName(palletFolder));
+                    Directory.CreateDirectory(gameMods);
+                    File.Copy(dll, Path.Combine(gameMods, "AuroraRP.dll"), true);
+                    report.Append("DLL → " + gameMods + "; ");
+                }
+
+                // 2) Апдейтер — в Plugins (грузятся раньше модов).
+                string updater = AuroraRpPaths.UpdaterDllOutput;
+                string plugins = AuroraRpPaths.PluginsFolder;
+                if (File.Exists(updater) && !string.IsNullOrEmpty(plugins))
+                {
+                    Directory.CreateDirectory(plugins);
+                    File.Copy(updater, Path.Combine(plugins, "AuroraRPUpdater.dll"), true);
+                    report.Append("апдейтер → " + plugins + "; ");
+                }
+
+                // 3) Палет — в MODS (контент).
+                if (!string.IsNullOrEmpty(palletFolder) && Directory.Exists(palletFolder) && !string.IsNullOrEmpty(palletMods))
+                {
+                    Directory.CreateDirectory(palletMods);
+                    string target = Path.Combine(palletMods, Path.GetFileName(palletFolder));
                     if (Directory.Exists(target))
                     {
                         Directory.Delete(target, true);
                     }
 
                     CopyDirectory(palletFolder, target);
+                    report.Append("палет → " + palletMods + "; ");
                 }
 
-                message = "Установлено в: " + mods;
-                return true;
+                message = report.Length > 0 ? ("Установлено: " + report.ToString().TrimEnd(' ', ';')) : "Нечего устанавливать.";
+                return report.Length > 0;
             }
             catch (Exception e)
             {

@@ -7,7 +7,28 @@
 | Что | Куда выкладывать | Как у игрока это появляется |
 |---|---|---|
 | **Палет** (терминал, принтер денег) | **mod.io**, страница BONELAB | сам, скачивается Fusion во время игры (без перезапуска) |
-| **DLL** (весь код мода: роли, деньги, меню) | **Thunderstore** | один клик в Gale/r2modman; вручную — просто положить в `Mods` |
+| **DLL** (весь код мода: роли, деньги, меню) | **Thunderstore** (+ GitHub Releases для автообновления) | один клик в Gale/r2modman; вручную — просто положить в `Mods` |
+| **Плагин `AuroraRPUpdater.dll`** | тот же пакет / GitHub Releases | один раз; дальше обновляет DLL и палет сам |
+
+## Как выпускать обновления (после настройки — 3 минуты)
+
+1. Поднимите версию в `Mod~/AuroraRP.csproj` (`AssemblyVersion`/`Version`), в
+   `Editor/AuroraRpPaths.cs` (`ModVersion`), в `Thunderstore/manifest.json` и в `update.json`.
+2. Unity → **AuroraRP → 3. СОБРАТЬ ВСЁ** — получите `AuroraRP.dll`, `AuroraRPUpdater.dll`,
+   `Builds\AuroraRP_v<версия>.zip` (для игроков) и `Builds\AuroraRP-pallet-<версия>.zip`
+   (для mod.io и автообновления).
+3. GitHub → Releases → новый тег `aurorarp-v<версия>` исходников, приложите файлы:
+   - `AuroraRP.dll`
+   - `AuroraRP-pallet-<версия>.zip`
+4. Обновите `AuroraRP/update.json` в репозитории: `version`, `dll`, `pallet`, `palletVersion`.
+5. Обновите палет на mod.io (для тех, у кого его нет, и для Fusion-докачки).
+
+Дальше всё само: у игроков плагин подтянет свежий `AuroraRP.dll` и палет до запуска игры.
+`dllSha256` в `update.json` заполнять не обязательно, но полезно (защита от битой закачки):
+`certutil -hashfile AuroraRP.dll SHA256` в Windows.
+
+> Плагин обновляет код **только** для тех, у кого он поставлен. Раздавайте `AuroraRPUpdater.dll`
+> в том же архиве/пакете, что и мод, — тогда автообновление есть у всех.
 
 > **Почему DLL нельзя «заставить скачаться» автоматически.** Для code-мода нужен MelonLoader,
 > а он читает файлы только из папки игры `BONELAB\Mods`. Ни mod.io, ни LabFusion не могут

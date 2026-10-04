@@ -13,6 +13,7 @@ cd /d "%~dp0"
 
 set VERSION=1.0.0
 set DLL=..\Mod~\bin\AuroraRP.dll
+set UPDATER=..\Updater\bin\AuroraRPUpdater.dll
 set OUT=..\Builds
 
 if not exist "%DLL%" (
@@ -32,12 +33,25 @@ if not exist "%OUT%" mkdir "%OUT%"
 
 copy /y "%DLL%" "AuroraRP.dll" >nul
 
+set HASUPDATER=0
+if exist "%UPDATER%" (
+  mkdir "Plugins" 2>nul
+  copy /y "%UPDATER%" "Plugins\AuroraRPUpdater.dll" >nul
+  set HASUPDATER=1
+)
+
 echo.
 echo Упаковываю Thunderstore-пакет...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Compress-Archive -Path 'manifest.json','README.md','icon.png','AuroraRP.dll' -DestinationPath '%OUT%\AuroraRP-Thunderstore-%VERSION%.zip' -Force"
+if "%HASUPDATER%"=="1" (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "Compress-Archive -Path 'manifest.json','README.md','icon.png','AuroraRP.dll','Plugins' -DestinationPath '%OUT%\AuroraRP-Thunderstore-%VERSION%.zip' -Force"
+) else (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "Compress-Archive -Path 'manifest.json','README.md','icon.png','AuroraRP.dll' -DestinationPath '%OUT%\AuroraRP-Thunderstore-%VERSION%.zip' -Force"
+)
 
 del "AuroraRP.dll" >nul 2>nul
+rmdir /s /q "Plugins" >nul 2>nul
 
 if errorlevel 1 (
   echo [ОШИБКА] Не удалось создать архив.
