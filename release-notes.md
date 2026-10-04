@@ -1,5 +1,8 @@
 # AuroraRP 1.0.0 — роль-плей мод для BONELAB
 
+![AuroraRP](https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-banner.jpg)
+
+
 ## Меню — как в BONELAB, LabFusion и SpectrumB (сборка от 4 октября, свежая)
 
 - **Меню встроено в родное меню игры.** В настройках появилась кнопка **AuroraRP**: она открывает

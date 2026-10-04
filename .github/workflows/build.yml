@@ -247,6 +247,8 @@ jobs:
             cp "out/$f" "release/$f" 2>/dev/null || true
           done
           cp AuroraRP/update.json release/update.json 2>/dev/null || true
+          cp AuroraRP/Thunderstore/icon.png release/AuroraRP-icon.png 2>/dev/null || true
+          cp media/aurora-banner.jpg release/AuroraRP-banner.jpg 2>/dev/null || true
           echo "--- уедет в релиз ---"
           ls -la release
 
