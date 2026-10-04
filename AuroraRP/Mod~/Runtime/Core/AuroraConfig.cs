@@ -43,6 +43,9 @@ namespace AuroraRP
         /// <summary>Окно двойного щелчка триггеров (запасной жест), сек.</summary>
         public float doubleClickWindow = 0.55f;
 
+        /// <summary>Писать в лог состояние кнопок жеста (для отладки ввода).</summary>
+        public bool debugInput = false;
+
         // ------------------------------------------------------------------ экономика
 
         /// <summary>Стартовый баланс нового игрока.</summary>
@@ -282,7 +285,19 @@ namespace AuroraRP
             {
                 if (_current == null)
                 {
-                    Load();
+                    try
+                    {
+                        Load();
+                    }
+                    catch (Exception e)
+                    {
+                        AuroraLog.Exception(e, "config load");
+                    }
+
+                    if (_current == null)
+                    {
+                        _current = new AuroraConfig();
+                    }
                 }
 
                 return _current;

@@ -9,6 +9,7 @@
   "sfxVolume": 0.7,
   "menuOpenGesture": "y_and_a",
   "doubleClickWindow": 0.55,
+  "debugInput": false,
 
   "startBalance": 5000,
   "transferHoldSeconds": 5.0,
