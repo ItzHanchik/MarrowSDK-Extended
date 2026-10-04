@@ -187,11 +187,11 @@ namespace AuroraRP.EditorTools
         {
             string palletFolder = Path.Combine(AuroraRpPaths.PalletRoot, "ServerData", "StandaloneWindows64");
 
+            // Палет не обязателен: красота уже внутри DLL, палет нужен только для игроков без мода.
             if (!Directory.Exists(palletFolder))
             {
-                EditorUtility.DisplayDialog("AuroraRP",
-                    "Не нашёл собранный палет: " + palletFolder + "\nСначала нажмите «СОБРАТЬ ВСЁ».", "Ок");
-                return;
+                palletFolder = null;
+                Debug.Log("[AuroraRP] Собранного палета нет — ставлю только DLL и апдейтер (этого достаточно).");
             }
 
             AuroraRpSetup.InstallToMods(palletFolder, out string message);
