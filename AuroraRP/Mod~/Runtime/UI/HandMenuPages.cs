@@ -666,10 +666,67 @@ namespace AuroraRP
                 },
                 AuroraButton.Style.Danger);
 
+            menu.AddSpacer(6f);
+            menu.AddSection(AuroraL.Get("settings.items"), UiTheme.Money);
+
+            menu.AddRow(
+                AuroraL.Get("settings.spawn.terminal"),
+                "bank",
+                AuroraL.Get("settings.spawn.terminal.hint"),
+                () => SpawnModContent(AuroraConfig.Current.terminalBarcode, 1.1f),
+                AuroraButton.Style.Primary);
+
+            menu.AddRow(
+                AuroraL.Get("settings.spawn.printer"),
+                "cash",
+                AuroraL.Get("settings.spawn.printer.hint"),
+                () => SpawnModContent(AuroraConfig.Current.printerBarcode, 0.9f));
+
             menu.AddInfo(AuroraL.Get("settings.help.body"), UiTheme.TextDim, 70f);
         }
 
         // ------------------------------------------------------------------- помощники
+
+        /// <summary>
+        /// Ставит предмет мода рядом с игроком. Модель берётся из DLL (пак или кодовая красота),
+        /// палет для этого не нужен; остальные мод-игроки получат такой же предмет.
+        /// </summary>
+        private static void SpawnModContent(string barcode, float distance)
+        {
+            var spawn = AuroraRuntime.Spawn;
+
+            if (spawn == null || string.IsNullOrWhiteSpace(barcode))
+            {
+                AuroraNotifications.Send(AuroraL.Get("settings.spawn.fail"), UiTheme.Warning);
+                return;
+            }
+
+            try
+            {
+                Vector3 position = spawn.SpawnPositionInFrontOfLocalPlayer(distance);
+
+                if (spawn.TrySpawn(barcode, position, Quaternion.identity, out string error))
+                {
+                    AuroraRuntime.Sfx?.Play(AuroraSfx.Kind.Success, 0.05f);
+                    AuroraNotifications.Send(AuroraL.Get("settings.spawn.ok"), UiTheme.Money);
+                    return;
+                }
+
+                string message = AuroraL.Get("settings.spawn.fail");
+
+                if (!string.IsNullOrEmpty(error))
+                {
+                    message += ": " + error;
+                }
+
+                AuroraNotifications.Send(message, UiTheme.Warning);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "spawn mod content");
+                AuroraNotifications.Send(AuroraL.Get("settings.spawn.fail"), UiTheme.Warning);
+            }
+        }
 
         private static void AddPager(HandMenu menu, int page, int pages, Action next, Action prev)
         {

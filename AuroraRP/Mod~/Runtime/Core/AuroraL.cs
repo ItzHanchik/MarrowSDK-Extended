@@ -184,6 +184,13 @@ namespace AuroraRP
             { "settings.host.reset.confirm", new[] { "Нажмите ещё раз для подтверждения", "Press again to confirm" } },
             { "settings.host.give",       new[] { "Выдать $1000 всем", "Give $1000 to everyone" } },
             { "settings.help",            new[] { "Помощь", "Help" } },
+            { "settings.items",           new[] { "Предметы AuroraRP", "AuroraRP items" } },
+            { "settings.spawn.terminal",  new[] { "Поставить банковский терминал", "Place bank terminal" } },
+            { "settings.spawn.terminal.hint", new[] { "берёшь в руку и жмёшь B — откроется меню", "grab it and press B to open the menu" } },
+            { "settings.spawn.printer",   new[] { "Поставить принтер денег", "Place money printer" } },
+            { "settings.spawn.printer.hint", new[] { "печатает деньги владельцу, пока он рядом", "prints money for its owner while he is near" } },
+            { "settings.spawn.ok",        new[] { "Появилось рядом", "Spawned nearby" } },
+            { "settings.spawn.fail",      new[] { "Не получилось поставить", "Could not place it" } },
             { "settings.help.body",       new[] { "Управление: X — меню сумм, B — двери, двойной щелчок обоих триггеров — меню.", "Controls: X — transfer amounts, B — doors, double click both triggers — menu." } },
 
             // ------------------------------------------------------------------ контент / сеть

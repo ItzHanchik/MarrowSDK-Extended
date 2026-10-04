@@ -44,6 +44,7 @@
   "arrestsEnabled": true,
   "arrestFine": 500,
 
+  "terminalBarcode": "ItzHanchik.AuroraRP.Spawnable.AuroraTerminal",
   "printerBarcode": "ItzHanchik.AuroraRP.Spawnable.MoneyPrinter",
   "printerInterval": 30.0,
   "printerPayout": 250,

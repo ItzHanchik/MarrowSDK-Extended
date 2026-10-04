@@ -220,6 +220,9 @@ namespace AuroraRP
         /// <summary>Пытаться скачать палет AuroraRP с mod.io автоматически, когда его нет.</summary>
         public bool autoPullPallet = true;
 
+        /// <summary>Barcode банковского терминала: модель собирается кодом внутри DLL.</summary>
+        public string terminalBarcode = "ItzHanchik.AuroraRP.Spawnable.AuroraTerminal";
+
         /// <summary>Сколько раз за сессию пытаться скачать палет, если не вышло.</summary>
         public int contentPullAttempts = 3;
 
@@ -426,6 +429,7 @@ namespace AuroraRP
             if (modioModId < 0) modioModId = 0;
             if (contentPullAttempts < 0) contentPullAttempts = 0;
             if (string.IsNullOrWhiteSpace(contentBarcode)) contentBarcode = printerBarcode;
+            if (string.IsNullOrWhiteSpace(terminalBarcode)) terminalBarcode = "ItzHanchik.AuroraRP.Spawnable.AuroraTerminal";
 
             if (shopItems == null)
             {
