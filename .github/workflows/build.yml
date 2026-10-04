@@ -57,27 +57,28 @@ jobs:
           PRIVATE_PAT: ${{ secrets.BONELAB_ASSEMBLIES_PAT }}
           WORKSPACE_REPO: ItzHanchik/bonelab-workspace
         run: |
-          mkdir -p stage/assemblies_raw stage/assemblies_zip stage/public
+          mkdir -p stage/assemblies_raw stage/assemblies_zip
           ZIP=""
+          SOURCE="не найдены"
 
           # 1) прямая ссылка
           if [ -z "$ZIP" ] && [ -n "$DIRECT_URL" ]; then
             case "$DIRECT_URL" in
               file://*) ZIP="${DIRECT_URL#file://}" ;;
-              *) curl -sSL "$DIRECT_URL" -o stage/assemblies_zip/direct.zip && ZIP=stage/assemblies_zip/direct.zip ;;
+              *) curl -sSL --max-time 900 "$DIRECT_URL" -o stage/assemblies_zip/direct.zip && ZIP=stage/assemblies_zip/direct.zip ;;
             esac
-            echo "Источник сборок: ссылка"
+            [ -n "$ZIP" ] && SOURCE="ссылка"
           fi
 
           # 2) приватный репозиторий по токену
           if [ -z "$ZIP" ] && [ -n "$PRIVATE_REPO" ] && [ -n "$PRIVATE_PAT" ]; then
             GH_TOKEN="$PRIVATE_PAT" gh release download -R "$PRIVATE_REPO" -p "*.zip" -D stage/assemblies_zip --clobber || true
             ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
-            if [ -n "$ZIP" ]; then echo "Источник сборок: приватный репозиторий $PRIVATE_REPO"; fi
+            [ -n "$ZIP" ] && SOURCE="приватный репозиторий $PRIVATE_REPO (PAT)"
           fi
 
           # 3) черновик релиза в этом же репозитории (без секретов).
-          #    REST-API черновики для токена Actions не отдаёт, поэтому идём через GraphQL.
+          #    REST-API черновики токену Actions не отдаёт, поэтому идём через GraphQL.
           if [ -z "$ZIP" ]; then
             OWNER="${GITHUB_REPOSITORY%/*}"
             REPO="${GITHUB_REPOSITORY#*/}"
@@ -93,7 +94,7 @@ jobs:
             done < stage/draft_assets.txt
 
             ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
-            if [ -n "$ZIP" ]; then echo "Источник сборок: черновик релиза в этом репозитории"; fi
+            [ -n "$ZIP" ] && SOURCE="черновик релиза в этом репозитории"
           fi
 
           # 4) публичный репозиторий bonelab-workspace — БЕЗ токена:
@@ -105,7 +106,7 @@ jobs:
               echo "Релиз $WORKSPACE_REPO: $URL"
               if curl -sSL --max-time 900 "$URL" -o stage/assemblies_zip/workspace.zip; then
                 ZIP=stage/assemblies_zip/workspace.zip
-                echo "Источник сборок: релиз $WORKSPACE_REPO"
+                SOURCE="релиз $WORKSPACE_REPO"
               fi
             fi
           fi
@@ -113,18 +114,18 @@ jobs:
           if [ -z "$ZIP" ]; then
             rm -rf stage/public
             if git -c credential.helper= clone --depth 1 "https://github.com/$WORKSPACE_REPO" stage/public >/dev/null 2>&1; then
-              echo "Клон $WORKSPACE_REPO получен, ищу сборки:"
+              echo "Клон $WORKSPACE_REPO получен, смотрю содержимое:"
               find stage/public -maxdepth 3 -type d | head -20
               DIR=$(find stage/public -type d -name Il2CppAssemblies 2>/dev/null | head -1)
               if [ -n "$DIR" ]; then
                 cp -r "$DIR"/. stage/assemblies_raw/
-                echo "Источник сборок: git-клон $WORKSPACE_REPO ($DIR)"
+                SOURCE="git-клон $WORKSPACE_REPO"
               else
                 FOUND=$(find stage/public -name "*.dll" 2>/dev/null | wc -l)
                 echo "Папки Il2CppAssemblies нет, DLL в репозитории: $FOUND"
                 if [ "$FOUND" -gt 0 ]; then
                   find stage/public -name "*.dll" -exec cp -n {} stage/assemblies_raw/ \;
-                  echo "Источник сборок: DLL прямо из git-клона $WORKSPACE_REPO"
+                  SOURCE="DLL из git-клона $WORKSPACE_REPO"
                 fi
               fi
             else
@@ -132,7 +133,7 @@ jobs:
             fi
           fi
 
-          if [ -n "$ZIP" ]; then
+          if [ -n "$ZIP" ] && [ -s "$ZIP" ]; then
             unzip -q -o "$ZIP" -d stage/assemblies_raw
           fi
 
@@ -147,8 +148,25 @@ jobs:
           fi
 
           COUNT=$(find stage/assemblies_raw -name "*.dll" 2>/dev/null | wc -l)
-          echo "Найдено DLL игровых сборок: $COUNT"
+
+          # Раскладываем в структуру настоящей игры — её ждёт AuroraRP.csproj.
+          GAMEDIR="stage/bonelab/BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies"
+          mkdir -p "$GAMEDIR"
+          find stage/assemblies_raw -name "*.dll" -exec cp -n {} "$GAMEDIR"/ \;
+
+          echo "Источник сборок: $SOURCE"
+          echo "DLL всего: $COUNT"
           find stage/assemblies_raw -name "*.dll" 2>/dev/null | head -5
+
+          {
+            echo "источник: $SOURCE"
+            echo "архив: ${ZIP:-нет}"
+            echo "DLL всего: $COUNT"
+            echo "разложено в: $GAMEDIR ($(ls "$GAMEDIR" | wc -l) файлов)"
+            echo "первые файлы:"
+            ls "$GAMEDIR" | head -10
+          } > stage/assemblies_info.txt
+
           echo "ASSEMBLIES_FOUND=$( [ "$COUNT" -gt 0 ] && echo yes || echo no )" >> "$GITHUB_ENV"
 
       - name: Собрать AuroraRPUpdater.dll
@@ -173,9 +191,9 @@ jobs:
         if: env.ASSEMBLIES_FOUND == 'yes'
         continue-on-error: true
         run: |
-          mkdir -p stage/bonelab/Il2CppAssemblies
-          find stage/assemblies_raw -name "*.dll" -exec cp -n {} stage/bonelab/Il2CppAssemblies/ \;
-          echo "IL2CPP-сборок: $(ls stage/bonelab/Il2CppAssemblies | wc -l)"
+          echo "IL2CPP-сборок: $(ls stage/bonelab/BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies 2>/dev/null | wc -l)"
+          echo "MelonLoader: $(ls stage/bonelab/MelonLoader/*.dll 2>/dev/null | wc -l) dll, net6: $(ls stage/bonelab/MelonLoader/net6/*.dll 2>/dev/null | wc -l) dll"
+          echo "Mods: $(ls stage/bonelab/Mods 2>/dev/null | tr '\n' ' ')"
           set +e
           dotnet build "AuroraRP/Mod~/AuroraRP.csproj" \
             -c Release -o out \
@@ -285,6 +303,11 @@ jobs:
             echo '```'
             ls -la out 2>/dev/null || true
             sha256sum out/* 2>/dev/null || true
+            echo '```'
+            echo
+            echo "## Игровые сборки"
+            echo '```'
+            cat stage/assemblies_info.txt 2>/dev/null || echo "(нет данных)"
             echo '```'
             echo
             echo "## Проверка AuroraRP.dll"
