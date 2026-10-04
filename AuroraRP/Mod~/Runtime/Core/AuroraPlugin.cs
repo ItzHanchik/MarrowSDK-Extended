@@ -21,6 +21,16 @@ namespace AuroraRP
         {
             Instance = this;
 
+            // Самая первая строка: если её нет в Latest.log, значит мод вообще не загрузился
+            // (нет MelonLoader, DLL не в Mods или не совпала версия загрузчика).
+            try
+            {
+                MelonLogger.Msg("<color=#7FD8FF>[AuroraRP]</color> мод загружен, MelonLoader " + typeof(MelonMod).Assembly.GetName().Version);
+            }
+            catch (Exception)
+            {
+            }
+
             try
             {
                 AuroraUtils.CaptureMainThread();

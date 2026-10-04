@@ -58,17 +58,33 @@ namespace AuroraRP
                     return _font;
                 }
 
-                _font = TryCreateOsFont();
-                if (_font != null)
+                // 1) Родной шрифт игры — так делает LabFusion (берёт arlon-medium из ресурсов игры).
+                //    Но берём его, только если в нём есть кириллица: иначе русские буквы будут квадратами.
+                _font = TryFindGameFont();
+
+                if (_font != null && HasCyrillic(_font))
                 {
-                    AuroraLog.Info("UI: используется системный шрифт (поддержка кириллицы)");
+                    AuroraLog.Info("UI: родной шрифт игры {0} (с кириллицей)", _font.name);
                     return _font;
                 }
 
-                _font = TryFindGameFont();
+                var gameFont = _font;
+
+                // 2) Системный шрифт (Segoe UI/Arial) — гарантированно с кириллицей.
+                _font = TryCreateOsFont();
+
                 if (_font != null)
                 {
-                    AuroraLog.Warn("UI: системный шрифт недоступен, берём шрифт игры — часть русских букв может не отображаться");
+                    AuroraLog.Info("UI: используется системный шрифт (кириллица)");
+                    return _font;
+                }
+
+                // 3) Совсем крайний случай — любой шрифт игры.
+                _font = gameFont;
+
+                if (_font != null)
+                {
+                    AuroraLog.Warn("UI: взят шрифт игры без кириллицы — часть русских букв может не отображаться");
                     return _font;
                 }
 
@@ -114,20 +130,70 @@ namespace AuroraRP
             }
         }
 
+        /// <summary>Есть ли в шрифте кириллица (иначе русский текст не отрисуется).</summary>
+        private static bool HasCyrillic(TMP_FontAsset font)
+        {
+            try
+            {
+                return font.HasCharacter('Я') && font.HasCharacter('а');
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Ищем шрифт игры так же, как LabFusion: перебором всех TMP_FontAsset в ресурсах
+        /// (в BONELAB лежит arlon-medium). Предпочитаем родной шрифт, но с кириллицей.
+        /// </summary>
         private static TMP_FontAsset TryFindGameFont()
         {
             try
             {
-                if (TMP_Settings.defaultFontAsset != null)
+                var all = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
+
+                if (all == null || all.Length == 0)
                 {
                     return TMP_Settings.defaultFontAsset;
                 }
 
-                var all = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
-                if (all != null && all.Length > 0)
+                TMP_FontAsset native = null;
+
+                for (int i = 0; i < all.Length; i++)
                 {
-                    return all[0];
+                    var font = all[i];
+
+                    if (font == null)
+                    {
+                        continue;
+                    }
+
+                    bool isArlon = font.name != null && font.name.ToLower().Contains("arlon");
+                    bool cyrillic = HasCyrillic(font);
+
+                    if (isArlon)
+                    {
+                        if (cyrillic)
+                        {
+                            return font;
+                        }
+
+                        if (native == null)
+                        {
+                            native = font;
+                        }
+
+                        continue;
+                    }
+
+                    if (cyrillic)
+                    {
+                        return font;
+                    }
                 }
+
+                return native != null ? native : TMP_Settings.defaultFontAsset;
             }
             catch (Exception e)
             {
