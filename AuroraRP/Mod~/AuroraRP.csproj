@@ -34,33 +34,32 @@
     <Il2CppDir>$(BonelabDir)\BONELAB_Data\il2cpp\MelonLoader\Il2CppAssemblies</Il2CppDir>
     <MelonDir>$(BonelabDir)\MelonLoader</MelonDir>
     <ModsDir>$(BonelabDir)\Mods</ModsDir>
-    <HasFusion Condition="Exists('$(ModsDir)\LabFusion.dll')">true</HasFusion>
   </PropertyGroup>
 
   <!-- LabFusion есть — включаем мультиплеерную часть. -->
-  <PropertyGroup Condition="'$(HasFusion)' == 'true'">
+  <PropertyGroup Condition="Exists('$(ModsDir)\LabFusion.dll')">
     <DefineConstants>$(DefineConstants);AURORA_FUSION</DefineConstants>
+    <HasFusion>true</HasFusion>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="Runtime\**\*.cs" />
   </ItemGroup>
 
-  <!-- Сборки игры (IL2CPP interop) + MelonLoader + моды-зависимости. -->
+  <!-- Сборки игры (IL2CPP interop) + MelonLoader + моды-зависимости.
+       Пути выводятся из $(BonelabDir); переопределить можно любой из них. -->
+  <PropertyGroup>
+    <Il2CppDir Condition="'$(Il2CppDir)' == ''">$(BonelabDir)\BONELAB_Data\il2cpp\MelonLoader\Il2CppAssemblies</Il2CppDir>
+    <ModsDir Condition="'$(ModsDir)' == ''">$(BonelabDir)\Mods</ModsDir>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="$(Il2CppDir)\*.dll">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="$(MelonDir)\*.dll">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="$(MelonDir)\net6\*.dll">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="$(ModsDir)\BoneLib.dll">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="$(ModsDir)\LabFusion.dll" Condition="Exists('$(ModsDir)\LabFusion.dll')">
+    <GameAssemblies Include="$(Il2CppDir)\*.dll" />
+    <GameAssemblies Include="$(BonelabDir)\MelonLoader\*.dll" />
+    <GameAssemblies Include="$(BonelabDir)\MelonLoader\net6\*.dll" />
+    <GameAssemblies Include="$(ModsDir)\BoneLib.dll" />
+    <GameAssemblies Include="$(ModsDir)\LabFusion.dll" Condition="Exists('$(ModsDir)\LabFusion.dll')" />
+    <Reference Include="@(GameAssemblies)">
       <Private>false</Private>
     </Reference>
   </ItemGroup>

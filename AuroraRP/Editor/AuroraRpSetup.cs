@@ -66,13 +66,20 @@ namespace AuroraRP.EditorTools
             string melonDir2 = Path.Combine(game, "MelonLoader", "net6");
 
             string references = BuildReferences(il2cpp, melonDir1, melonDir2, boneLib, labFusion);
-            string defines = hasFusion ? "<DefineConstants>$(DefineConstants);AURORA_FUSION</DefineConstants>" : "";
+
+            string definesBlock = hasFusion
+                ? "    <DefineConstants>$(DefineConstants);AURORA_FUSION</DefineConstants>\n    <HasFusion>true</HasFusion>"
+                : "    <HasFusion>false</HasFusion>";
 
             string csproj = $@"<Project Sdk=""Microsoft.NET.Sdk"">
 
   <!--
-    AuroraRP {AuroraRpPaths.ModVersion} — проект сборки мода.
-    Файл генерируется автоматически (меню AuroraRP в Unity). Правьте исходники в Mod~/Runtime.
+    AuroraRP {AuroraRpPaths.ModVersion} — проект сборки мода (MelonLoader + BoneLib).
+    Файл сгенерирован автоматически из Unity (меню AuroraRP). Исходники — в Mod~/Runtime.
+
+    Сборка вручную:
+        dotnet build AuroraRP.csproj -c Release -o bin
+    Если LabFusion был установлен на момент генерации, мультиплеер включён (AURORA_FUSION).
   -->
 
   <PropertyGroup>
@@ -84,11 +91,14 @@ namespace AuroraRP.EditorTools
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <DebugType>none</DebugType>
-    <NoWarn>CS0436;CS0169;CS0649;CS0162;CS0414</NoWarn>
-    <AssemblySearchPaths>$(AssemblySearchPaths)</AssemblySearchPaths>
-    {defines}
+    <NoWarn>CS0436;CS0169;CS0649;CS0162;CS0414;CS0108;CS0114</NoWarn>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+{definesBlock}
+    <BonelabDir>{Escape(game)}</BonelabDir>
+    <Il2CppDir>{Escape(il2cpp)}</Il2CppDir>
+    <ModsDir>{Escape(Path.Combine(game, "Mods"))}</ModsDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -98,6 +108,13 @@ namespace AuroraRP.EditorTools
   <ItemGroup>
 {references}
   </ItemGroup>
+
+  <Target Name=""AuroraCheckPaths"" BeforeTargets=""ResolveAssemblyReferences"">
+    <Error Condition=""!Exists('$(Il2CppDir)')""
+           Text=""Не найдена папка IL2CPP-сборок: $(Il2CppDir). Перегенерируйте проект: Unity → AuroraRP → 0. Проверить окружение."" />
+    <Message Importance=""high"" Text=""AuroraRP: LabFusion включён — мод соберётся с мультиплеером."" Condition=""'$(HasFusion)' == 'true'"" />
+    <Message Importance=""high"" Text=""AuroraRP: LabFusion не найден — только одиночная игра."" Condition=""'$(HasFusion)' != 'true'"" />
+  </Target>
 
 </Project>
 ";
@@ -120,35 +137,37 @@ namespace AuroraRP.EditorTools
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine("    <!-- Все interop-сборки игры -->");
-            sb.AppendLine("    <GameAssemblies Include=\"" + Escape(Path.Combine(il2cpp, "*.dll")) + "\" />");
+            AddReference(sb, Path.Combine(il2cpp, "*.dll"), "IL2CPP-сборки игры (из папки BONELAB_Data)");
 
             if (Directory.Exists(melon1))
             {
-                sb.AppendLine("    <GameAssemblies Include=\"" + Escape(Path.Combine(melon1, "*.dll")) + "\" />");
+                AddReference(sb, Path.Combine(melon1, "*.dll"), "MelonLoader");
             }
 
             if (Directory.Exists(melon2))
             {
-                sb.AppendLine("    <GameAssemblies Include=\"" + Escape(Path.Combine(melon2, "*.dll")) + "\" />");
+                AddReference(sb, Path.Combine(melon2, "*.dll"), "MelonLoader (net6)");
             }
 
             if (!string.IsNullOrEmpty(boneLib) && File.Exists(boneLib))
             {
-                sb.AppendLine("    <GameAssemblies Include=\"" + Escape(boneLib) + "\" />");
+                AddReference(sb, boneLib, "BoneLib (зависимость)");
             }
 
             if (!string.IsNullOrEmpty(labFusion) && File.Exists(labFusion))
             {
-                sb.AppendLine("    <GameAssemblies Include=\"" + Escape(labFusion) + "\" />");
+                AddReference(sb, labFusion, "LabFusion (мультиплеер)");
             }
 
-            sb.AppendLine();
-            sb.AppendLine("    <Reference Include=\"@(GameAssemblies)\">");
+            return sb.ToString();
+        }
+
+        private static void AddReference(StringBuilder sb, string path, string comment)
+        {
+            sb.AppendLine("    <!-- " + comment + " -->");
+            sb.AppendLine("    <Reference Include=\"" + Escape(path) + "\">");
             sb.AppendLine("      <Private>false</Private>");
             sb.AppendLine("    </Reference>");
-
-            return sb.ToString();
         }
 
         private static string Escape(string path) => path.Replace("&", "&amp;").Replace("\"", "&quot;");
