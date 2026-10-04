@@ -52,8 +52,10 @@ namespace AuroraRP
             }
 
             HandleMenuGesture(left, right);
+            HandleKeyboard();
             HandleButtonB(left, right);
             HandleButtonX(left);
+            TickDiagnostics(left, right);
         }
 
         private void HandleMenuGesture(BaseController left, BaseController right)
@@ -65,6 +67,7 @@ namespace AuroraRP
             {
                 if (ComboYPlusA())
                 {
+                    AuroraLog.Info("Жест меню: Y + A");
                     FireMenuGesture();
                     return;
                 }
@@ -137,6 +140,74 @@ namespace AuroraRP
                 _rightClicks = 0;
                 FireMenuGesture();
             }
+        }
+
+        /// <summary>
+        /// Клавиатура — страховка: F8 открывает/закрывает меню всегда, даже если
+        /// жест на контроллерах не срабатывает. В VR за ПК это самый надёжный путь.
+        /// </summary>
+        private void HandleKeyboard()
+        {
+            try
+            {
+                if (UnityEngine.Input.GetKeyDown(KeyCode.F8))
+                {
+                    AuroraLog.Info("Меню: нажата F8 (клавиатура).");
+                    FireMenuGesture();
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        // --- диагностика: пишем в лог, когда меняется состояние любой из кнопок жеста
+        private bool _dbgY;
+        private bool _dbgA;
+        private bool _dbgBLeft;
+        private bool _dbgARight;
+        private bool _dbgTriggerLeft;
+        private bool _dbgTriggerRight;
+
+        private void TickDiagnostics(BaseController left, BaseController right)
+        {
+            if (!AuroraConfig.Current.debugInput)
+            {
+                return;
+            }
+
+            bool y = LeftYDown();
+            bool a = RightADown();
+            bool bLeft = false;
+            bool aRight = false;
+
+            try
+            {
+                bLeft = left != null && left.GetBButtonDown();
+                aRight = right != null && right.GetAButtonDown();
+            }
+            catch (Exception)
+            {
+            }
+
+            bool triggerLeft = IsTriggerDown(BoneLib.Player.LeftHand);
+            bool triggerRight = IsTriggerDown(BoneLib.Player.RightHand);
+
+            if (y == _dbgY && a == _dbgA && bLeft == _dbgBLeft && aRight == _dbgARight &&
+                triggerLeft == _dbgTriggerLeft && triggerRight == _dbgTriggerRight)
+            {
+                return;
+            }
+
+            _dbgY = y;
+            _dbgA = a;
+            _dbgBLeft = bLeft;
+            _dbgARight = aRight;
+            _dbgTriggerLeft = triggerLeft;
+            _dbgTriggerRight = triggerRight;
+
+            AuroraLog.Info("Ввод: Y-лев(raw)={0} A-прав(raw)={1} B-лев(Marrow)={2} A-прав(Marrow)={3} курок-лев={4} курок-прав={5}",
+                y, a, bLeft, aRight, triggerLeft, triggerRight);
         }
 
         private void FireMenuGesture()

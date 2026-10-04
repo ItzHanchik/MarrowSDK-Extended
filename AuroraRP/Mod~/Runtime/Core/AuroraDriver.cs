@@ -11,6 +11,7 @@ namespace AuroraRP
         public static AuroraDriver Instance { get; private set; }
 
         private float _lastLevelCheck;
+        private bool _updateErrorLogged;
 
         private void Awake()
         {
@@ -18,19 +19,39 @@ namespace AuroraRP
             DontDestroyOnLoad(gameObject);
             AuroraUtils.CaptureMainThread();
             AuroraRuntime.Driver = this;
-            AuroraRuntime.Initialize();
+
+            try
+            {
+                AuroraRuntime.Initialize();
+            }
+            catch (System.Exception e)
+            {
+                AuroraLog.Exception(e, "driver awake");
+            }
         }
 
         private void Update()
         {
             float dt = Time.unscaledDeltaTime;
-            AuroraRuntime.Tick(dt);
 
-            // Раз в секунду проверяем, что ссылки на риг игрока валидны (после загрузки уровня они новые).
-            if (Time.realtimeSinceStartup - _lastLevelCheck > 1f)
+            try
             {
-                _lastLevelCheck = Time.realtimeSinceStartup;
-                GameHooks.ValidatePlayerReferences();
+                AuroraRuntime.Tick(dt);
+
+                // Раз в секунду проверяем, что ссылки на риг игрока валидны (после загрузки уровня они новые).
+                if (Time.realtimeSinceStartup - _lastLevelCheck > 1f)
+                {
+                    _lastLevelCheck = Time.realtimeSinceStartup;
+                    GameHooks.ValidatePlayerReferences();
+                }
+            }
+            catch (System.Exception e)
+            {
+                if (!_updateErrorLogged)
+                {
+                    _updateErrorLogged = true;
+                    AuroraLog.Exception(e, "driver update");
+                }
             }
         }
 

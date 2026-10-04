@@ -62,35 +62,45 @@ namespace AuroraRP
 
             AuroraLog.Info("AuroraRP {0} — инициализация", Version);
 
-            AuroraFileLog.Initialize();
-            AuroraConfig.Load();
-            AuroraSfx.Initialize();
+            // Каждый шаг в своём try/catch: если, например, не загрузится звук или сетевая часть,
+            // остальные системы (в первую очередь меню) всё равно должны подняться.
+            SafeInit("filelog", () => AuroraFileLog.Initialize());
+            SafeInit("config", () => AuroraConfig.Load());
+            SafeInit("sfx", () => AuroraSfx.Initialize());
 
             State = new AuroraState();
-            Roles = new RoleService(State);
-            Wallet = new WalletService(State);
-            Transfers = new TransferService(State, Wallet);
-            Spawn = new SpawnService();
-            Doors = new DoorService(State);
-            Craft = new CraftService(State);
-            Crime = new CrimeService(State, Wallet);
-            Shop = new ShopService(State, Wallet, Roles, Spawn);
-            Contracts = new ContractService(State, Wallet);
-            Net = NetFactory.Create();
-            Authority = new AuroraAuthority(State, Wallet, Roles, Doors, Shop, Contracts, Craft, Crime);
-            Net.MessageReceived += Authority.HandleMessage;
-            Net.PeerMissingMod += OnPeerMissingMod;
-            Input = new AuroraInput();
-            Menu = new HandMenu();
-            Scanner = new WorldScanner();
-            NameTags = new NameTagService();
-            Bridge = new PeerBridgeService(State);
-            Bank = new DiscordBankBridge(State);
+            SafeInit("roles", () => Roles = new RoleService(State));
+            SafeInit("wallet", () => Wallet = new WalletService(State));
+            SafeInit("transfers", () => Transfers = new TransferService(State, Wallet));
+            SafeInit("spawn", () => Spawn = new SpawnService());
+            SafeInit("doors", () => Doors = new DoorService(State));
+            SafeInit("craft", () => Craft = new CraftService(State));
+            SafeInit("crime", () => Crime = new CrimeService(State, Wallet));
+            SafeInit("shop", () => Shop = new ShopService(State, Wallet, Roles, Spawn));
+            SafeInit("contracts", () => Contracts = new ContractService(State, Wallet));
+            SafeInit("net", () => Net = NetFactory.Create());
+            SafeInit("authority", () =>
+            {
+                Authority = new AuroraAuthority(State, Wallet, Roles, Doors, Shop, Contracts, Craft, Crime);
 
-            GameHooks.Subscribe();
+                if (Net != null)
+                {
+                    Net.MessageReceived += Authority.HandleMessage;
+                    Net.PeerMissingMod += OnPeerMissingMod;
+                }
+            });
+
+            SafeInit("input", () => Input = new AuroraInput());
+            SafeInit("menu", () => Menu = new HandMenu());
+            SafeInit("scanner", () => Scanner = new WorldScanner());
+            SafeInit("nametags", () => NameTags = new NameTagService());
+            SafeInit("bridge", () => Bridge = new PeerBridgeService(State));
+            SafeInit("bank", () => Bank = new DiscordBankBridge(State));
+
+            SafeInit("hooks", GameHooks.Subscribe);
 
             Initialized = true;
-            AuroraLog.Info("Сервисы запущены. Режим сети: {0}", Net.Description);
+            AuroraLog.Info("Сервисы запущены. Режим сети: {0}", Net != null ? Net.Description : "нет");
         }
 
         internal static void Shutdown()
@@ -128,20 +138,56 @@ namespace AuroraRP
 
             AuroraUtils.PumpMainThread();
 
-            Net?.Tick(dt);
-            Input?.Tick(dt);
-            Transfers?.Tick(dt);
-            Crime?.Tick(dt);
-            Contracts?.Tick(dt);
-            Doors?.Tick(dt);
-            Shop?.Tick(dt);
-            Scanner?.Tick(dt);
-            Menu?.Tick(dt);
-            Bank?.Tick(dt);
-            Craft?.Tick(dt);
-            NameTags?.Tick(dt);
-            Bridge?.Tick(dt);
-            AuroraVisuals.Tick(dt);
+            // Каждый сервис в своей «обёртке»: ошибка одного не должна останавливать остальные
+            // (иначе, например, сломанное меню убивает и экономику, и спавн).
+            SafeTick("net", () => Net?.Tick(dt));
+            SafeTick("input", () => Input?.Tick(dt));
+            SafeTick("transfers", () => Transfers?.Tick(dt));
+            SafeTick("crime", () => Crime?.Tick(dt));
+            SafeTick("contracts", () => Contracts?.Tick(dt));
+            SafeTick("doors", () => Doors?.Tick(dt));
+            SafeTick("shop", () => Shop?.Tick(dt));
+            SafeTick("scanner", () => Scanner?.Tick(dt));
+            SafeTick("menu", () => Menu?.Tick(dt));
+            SafeTick("bank", () => Bank?.Tick(dt));
+            SafeTick("craft", () => Craft?.Tick(dt));
+            SafeTick("nametags", () => NameTags?.Tick(dt));
+            SafeTick("bridge", () => Bridge?.Tick(dt));
+            SafeTick("visuals", () => AuroraVisuals.Tick(dt));
+        }
+
+        // ------------------------------------------------------------------ страховка
+
+        /// <summary>Инициализация сервиса с защитой: одна сломанная система не гасит весь мод.</summary>
+        private static void SafeInit(string name, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "init:" + name);
+            }
+        }
+
+        private static readonly System.Collections.Generic.HashSet<string> ReportedTickErrors =
+            new System.Collections.Generic.HashSet<string>();
+
+        /// <summary>Тик сервиса с защитой: ошибка логируется один раз и не рвёт остальные системы.</summary>
+        private static void SafeTick(string name, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                if (ReportedTickErrors.Add(name))
+                {
+                    AuroraLog.Exception(e, "tick:" + name);
+                }
+            }
         }
 
         // -------------------------------------------------------------- утилиты
