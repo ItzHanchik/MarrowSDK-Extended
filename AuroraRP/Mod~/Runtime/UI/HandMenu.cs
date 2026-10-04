@@ -864,9 +864,27 @@ namespace AuroraRP
                 return;
             }
 
-            // Целевая точка: центр ладони, чуть наружу от плоскости ладони.
+            // Целевая точка: центр ладони, чуть наружу от её плоскости.
             Vector3 targetPosition = palm.position + palm.forward * AuroraConfig.Current.palmOffsetZ;
-            Quaternion targetRotation = Quaternion.LookRotation(palm.forward, palm.up) *
+
+            // Панель висит на ладони, но всегда развёрнута к лицу игрока, а «верх» панели
+            // смотрит вдоль пальцев — так меню читается с любого ракурса руки.
+            var head = BoneLib.Player.Head;
+            Vector3 face = head != null ? head.position - targetPosition : palm.forward;
+
+            if (face.sqrMagnitude < 0.0001f)
+            {
+                face = palm.forward;
+            }
+
+            Vector3 up = palm.up;
+
+            if (up.sqrMagnitude < 0.0001f)
+            {
+                up = Vector3.up;
+            }
+
+            Quaternion targetRotation = Quaternion.LookRotation(face.normalized, up) *
                                         Quaternion.Euler(AuroraConfig.Current.palmTilt, 0f, 0f);
 
             var t = _canvas.transform;
