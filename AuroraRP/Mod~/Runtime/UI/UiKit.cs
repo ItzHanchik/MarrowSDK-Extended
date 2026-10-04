@@ -211,8 +211,7 @@ namespace AuroraRP
             Default = 0,
             Primary = 1,
             Danger = 2,
-            Ghost = 3,
-            Tab = 4
+            Ghost = 3
         }
 
         public RectTransform Rect { get; }
@@ -247,7 +246,6 @@ namespace AuroraRP
             {
                 Style.Primary => UiTheme.Accent,
                 Style.Danger => UiTheme.Danger,
-                Style.Tab => UiTheme.Violet,
                 _ => UiTheme.AccentDeep
             };
 
@@ -256,7 +254,6 @@ namespace AuroraRP
                 Style.Primary => AuroraUtils.Hex("#C2161FF0"),
                 Style.Danger => AuroraUtils.Hex("#6E0A0FE6"),
                 Style.Ghost => AuroraUtils.Hex("#00000000"),
-                Style.Tab => AuroraUtils.Hex("#8E0F14E6"),
                 _ => UiTheme.Row
             };
 
@@ -282,7 +279,7 @@ namespace AuroraRP
 
             float textLeft = string.IsNullOrEmpty(icon) ? 22f : 20f + size.y * 0.5f + 14f;
 
-            Label = UiKit.NewText("Label", container, label, style == Style.Tab ? 26f : 30f, UiTheme.Text,
+            Label = UiKit.NewText("Label", container, label, 30f, UiTheme.Text,
                 TextAlignmentOptions.MidlineLeft);
             Label.rectTransform.anchorMin = new Vector2(0f, 0.5f);
             Label.rectTransform.anchorMax = new Vector2(1f, 0.5f);

@@ -38,7 +38,6 @@ namespace AuroraRP
         public const float PanelHeight = 720f;
         public const float Padding = 22f;
         public const float RowHeight = 76f;
-        public const float TabWidth = 132f;
         public const float HeaderHeight = 104f;
 
         public static float Scale => AuroraConfig.Current.menuScale;

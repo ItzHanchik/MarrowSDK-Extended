@@ -57,7 +57,7 @@ namespace AuroraRP
             { "menu.tab.doors",           new[] { "Двери", "Doors" } },
             { "menu.tab.contracts",       new[] { "Контракты", "Contracts" } },
             { "menu.tab.settings",        new[] { "Настройки", "Settings" } },
-            { "menu.hint.open",           new[] { "Y + A — открыть меню", "Y + A to open the menu" } },
+            { "menu.hint.open",           new[] { "Посмотри на левую ладонь — меню появится само (или Y + A)", "Look at your left palm - the menu appears by itself (or Y + A)" } },
             { "menu.hint.press",          new[] { "Нажмите триггер, чтобы выбрать пункт", "Press the trigger to select an item" } },
             { "menu.hint.poke",           new[] { "Или ткните правой рукой прямо в пункт", "Or poke an item with your right hand" } },
             { "menu.footer",              new[] { "AuroraRP • Phoenix Framework", "AuroraRP • Phoenix Framework" } },

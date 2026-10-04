@@ -246,7 +246,7 @@ namespace AuroraRP
 
             // Всплывающая подсказка о жесте открытия (видна пару секунд после первого открытия).
             _hintText = UiKit.NewText("GestureHint", core.rectTransform,
-                "Открыть меню: зажать Y (левая рука) + A (правая).  Закрыть: Y + A или F8.",
+                "Меню всплывает, когда смотришь на левую ладонь.  Держать открытым: Y + A.",
                 20f, UiTheme.Accent, TextAlignmentOptions.Midline);
             _hintText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             _hintText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
