@@ -10,6 +10,30 @@
 | **DLL** (весь код мода: роли, деньги, меню) | **Thunderstore** (+ GitHub Releases для автообновления) | один клик в Gale/r2modman; вручную — просто положить в `Mods` |
 | **Плагин `AuroraRPUpdater.dll`** | тот же пакет / GitHub Releases | один раз; дальше обновляет DLL, палет и зависимости (BoneLib, LabFusion) сам |
 
+## Сборка через GitHub Actions (автоматически)
+
+В репозитории лежит `.github/workflows/build.yml`. Он запускается:
+- при пуше тега `aurorarp-v*` (то есть на каждый релиз);
+- вручную: **Actions → Build AuroraRP → Run workflow**.
+
+Что CI собирает **сам** (без Unity и без игровых файлов):
+| Артефакт | Откуда |
+|---|---|
+| `AuroraRPUpdater.dll` | `AuroraRP/Updater` — качает MelonLoader 0.6.6 с его релиза и компилирует плагин |
+| `AuroraRP-Thunderstore-1.0.0.zip` | пакет для Thunderstore с плагином внутри |
+| `AuroraRP-pallet-src-1.0.0.zip` | исходный контент палета (конфиг, документы) |
+
+Всё это автоматически прикладывается к релизу, откуда его забирает `AuroraRPUpdater`.
+
+**Чтобы CI собирал ещё и `AuroraRP.dll`** (сам мод), добавьте в репозиторий секрет
+`BONELAB_ASSEMBLIES_URL` — прямую ссылку на zip с игровыми сборками
+(`BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies`). BoneLib и LabFusion CI тянет сам
+из их публичных релизов. Игровые сборки в публичный доступ выкладывать нельзя — держите
+их в приватном месте, доступном только раннеру.
+
+Палет (asset-бандлы) собирается **только в Unity**: `AuroraRP → 3. СОБРАТЬ ВСЁ` → файл
+`Builds/AuroraRP-pallet-<версия>.zip` приложите к релизу руками.
+
 ## Как выпускать обновления (после настройки — 3 минуты)
 
 1. Поднимите версию в `Mod~/AuroraRP.csproj` (`AssemblyVersion`/`Version`), в

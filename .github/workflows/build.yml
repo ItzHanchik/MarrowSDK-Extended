@@ -42,22 +42,36 @@ jobs:
             -p:BonelabDir="$PWD/stage/bonelab"
           ls -la out
 
+      - name: Зависимости мода (BoneLib + LabFusion, публичные релизы)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p stage/bonelab/Mods
+          gh release download v3.2.2 -R yowchap/BoneLib -p "BoneLib.zip" -D stage/mods
+          unzip -q -o stage/mods/BoneLib.zip -d stage/mods/unpacked || true
+          find stage/mods/unpacked -name "BoneLib.dll" -exec cp {} stage/bonelab/Mods/ \; || true
+          gh release download v1.14.2 -R Lakatrazz/BONELAB-Fusion -p "LabFusion.dll" -D stage/bonelab/Mods
+          ls -la stage/bonelab/Mods
+
       - name: Собрать мод (если в секретах есть ссылка на игровые сборки)
         env:
           ASSEMBLIES_URL: ${{ secrets.BONELAB_ASSEMBLIES_URL }}
         run: |
           if [ -z "$ASSEMBLIES_URL" ]; then
-            echo "BONELAB_ASSEMBLIES_URL не задан — пропускаю сборку мода."
-            echo "(Игровые сборки нельзя выкладывать: их достаёт Unity или игра.)"
+            echo "BONELAB_ASSEMBLIES_URL не задан — мод соберётся в Unity (AuroraRP → 3. СОБРАТЬ ВСЁ)."
+            echo "Чтобы CI собрал и AuroraRP.dll, положите zip с игровыми сборками"
+            echo "(BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies) по ссылке в секрете."
             exit 0
           fi
           mkdir -p stage/bonelab/Il2CppAssemblies
           curl -sSL "$ASSEMBLIES_URL" -o stage/assemblies.zip
-          unzip -q stage/assemblies.zip -d stage/bonelab/Il2CppAssemblies
+          unzip -q stage/assemblies.zip -d stage/assemblies_raw
+          find stage/assemblies_raw -name "Il2Cpp*.dll" -o -name "Assembly-CSharp*.dll" -o -name "UnityEngine*.dll" | head -5
+          find stage/assemblies_raw -name "*.dll" -exec cp -n {} stage/bonelab/Il2CppAssemblies/ \;
           dotnet build "AuroraRP/Mod~/AuroraRP.csproj" \
             -c Release -o out \
-            -p:BonelabDir="$PWD/stage/bonelab" || \
-            echo "Сборка мода не удалась — соберёшь её в Unity (AuroraRP → 3. СОБРАТЬ ВСЁ)."
+            -p:BonelabDir="$PWD/stage/bonelab"
+          ls -la out
 
       - name: Thunderstore-пакет с плагином
         run: |
@@ -67,6 +81,12 @@ jobs:
           rm -f ../../out/AuroraRP-Thunderstore-1.0.0.zip
           zip -q -r ../../out/AuroraRP-Thunderstore-1.0.0.zip manifest.json README.md icon.png Plugins
 
+      - name: Собрать палет-архив из закоммиченного контента (pallet.json + config)
+        run: |
+          mkdir -p out
+          cd AuroraRP/Pallet
+          zip -q -r "../../out/AuroraRP-pallet-src-1.0.0.zip" . -x "ServerData/*"
+
       - name: Приложить файлы к релизу
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -75,7 +95,9 @@ jobs:
           gh release upload "${GITHUB_REF_NAME}" \
             out/AuroraRPUpdater.dll \
             out/AuroraRP-Thunderstore-1.0.0.zip \
-            --clobber
+            out/AuroraRP-pallet-src-1.0.0.zip \
+            --clobber \
+            || gh release upload "${GITHUB_REF_NAME}" out/AuroraRPUpdater.dll out/AuroraRP-Thunderstore-1.0.0.zip out/AuroraRP-pallet-src-1.0.0.zip --clobber
 
       - name: Артефакты
         uses: actions/upload-artifact@v4
