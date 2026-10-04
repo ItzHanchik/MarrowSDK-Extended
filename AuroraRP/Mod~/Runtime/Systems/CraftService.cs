@@ -225,7 +225,7 @@ namespace AuroraRP
 
                 UiKit.Panel("Bg", rect, new Vector2(400f, 110f), UiTheme.Panel, 0.92f, false);
 
-                var text = UiKit.NewText("Text", rect, "", 30f, UiTheme.Money, TextAlignmentOptions.MidlineCenter);
+                var text = UiKit.NewText("Text", rect, "", 30f, UiTheme.Money, TextAlignmentOptions.Midline);
                 text.rectTransform.sizeDelta = new Vector2(380f, 90f);
 
                 _signs.Add(go);

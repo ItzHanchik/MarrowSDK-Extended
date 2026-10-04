@@ -62,6 +62,11 @@ namespace AuroraRP
         public long reward;
         public int status;
         public float created;
+
+        // Удобные имена для меню (в файлах остаются короткие имена полей).
+        public string TargetName => targetName;
+        public long Reward => reward;
+        public int Status => status;
     }
 
     /// <summary>Полный снимок состояния сессии: игроки, двери, контракты.</summary>
@@ -74,7 +79,7 @@ namespace AuroraRP
         public List<ContractRecord> contracts = new List<ContractRecord>();
         public int nextContractId = 1;
 
-        public string ToJson() => JsonUtility.ToJson(this);
+        public string ToJson() => AuroraJson.Write(this);
 
         public static AuroraSnapshot FromJson(string json)
         {
@@ -85,7 +90,7 @@ namespace AuroraRP
 
             try
             {
-                var snap = JsonUtility.FromJson<AuroraSnapshot>(json);
+                var snap = AuroraJson.Read<AuroraSnapshot>(json);
                 if (snap == null)
                 {
                     return new AuroraSnapshot();

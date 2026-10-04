@@ -153,7 +153,7 @@ namespace AuroraRP
                 accent.rectTransform.pivot = new Vector2(0.5f, 1f);
                 accent.rectTransform.anchoredPosition = new Vector2(0f, -20f);
 
-                var title = UiKit.NewText("Title", rect, "", 52f, UiTheme.Text, TextAlignmentOptions.MidlineCenter);
+                var title = UiKit.NewText("Title", rect, "", 52f, UiTheme.Text, TextAlignmentOptions.Midline);
                 title.rectTransform.sizeDelta = new Vector2(470f, 70f);
                 title.rectTransform.anchorMin = new Vector2(0.5f, 1f);
                 title.rectTransform.anchorMax = new Vector2(0.5f, 1f);

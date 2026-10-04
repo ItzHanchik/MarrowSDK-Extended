@@ -283,7 +283,7 @@ namespace AuroraRP
             _footer.pivot = new Vector2(0.5f, 0f);
             _footer.anchoredPosition = new Vector2(0f, 12f);
 
-            _footerText = UiKit.NewText("FooterText", _footer, AuroraL.Get("menu.hint.open"), 20f, UiTheme.TextDim, TextAlignmentOptions.MidlineCenter);
+            _footerText = UiKit.NewText("FooterText", _footer, AuroraL.Get("menu.hint.open"), 20f, UiTheme.TextDim, TextAlignmentOptions.Midline);
             _footerText.rectTransform.anchorMin = Vector2.zero;
             _footerText.rectTransform.anchorMax = Vector2.one;
             _footerText.rectTransform.offsetMin = Vector2.zero;

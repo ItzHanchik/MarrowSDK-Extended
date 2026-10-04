@@ -323,11 +323,31 @@ jobs:
             fi
             echo '```'
             echo
+            echo "## Окружение сборки"
+            echo '```'
+            echo "MelonLoader:"
+            ls stage/bonelab/MelonLoader 2>/dev/null | head -40 || echo "(нет папки)"
+            echo
+            echo "MelonLoader/net6:"
+            ls stage/bonelab/MelonLoader/net6 2>/dev/null | head -60 || echo "(нет папки)"
+            echo
+            echo "BoneLib в Mods: $(ls stage/bonelab/Mods 2>/dev/null | tr '\n' ' ')"
+            echo
+            echo "Поиск типа InteractableHost в игровых сборках:"
+            for f in stage/bonelab/BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies/*.dll; do
+              if grep -qa "InteractableHost" "$f" 2>/dev/null; then
+                echo "  $(basename "$f"): $(grep -ao "SLZ[.A-Za-z]*InteractableHost" "$f" 2>/dev/null | sort -u | head -3 | tr '\n' ' ')"
+              fi
+            done
+            echo '```'
+            echo
             echo "## Лог сборки мода (последние 400 строк)"
             echo '```'
             tail -n 400 build_mod.log 2>/dev/null || echo "(сборка мода не запускалась)"
             echo '```'
           } > ci-report/REPORT.md
+
+          cp build_mod.log ci-report/build_mod.log 2>/dev/null || true
 
           # Готовую DLL (репозиторий приватный) кладём рядом с отчётом —
           # так разработчик может проверить сборку, не скачивая релиз.

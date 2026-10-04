@@ -298,7 +298,7 @@ namespace AuroraRP
             {
                 if (!string.IsNullOrEmpty(AuroraPack.ConfigJson))
                 {
-                    var embedded = JsonUtility.FromJson<AuroraConfig>(AuroraPack.ConfigJson);
+                    var embedded = AuroraJson.Read<AuroraConfig>(AuroraPack.ConfigJson);
 
                     if (embedded != null)
                     {
@@ -320,7 +320,7 @@ namespace AuroraRP
 
                 if (!string.IsNullOrEmpty(palletPath) && File.Exists(palletPath))
                 {
-                    var palletConfig = JsonUtility.FromJson<AuroraConfig>(File.ReadAllText(palletPath));
+                    var palletConfig = AuroraJson.Read<AuroraConfig>(File.ReadAllText(palletPath));
 
                     if (palletConfig != null)
                     {
@@ -340,7 +340,7 @@ namespace AuroraRP
             {
                 if (File.Exists(FilePath))
                 {
-                    var user = JsonUtility.FromJson<AuroraConfig>(File.ReadAllText(FilePath));
+                    var user = AuroraJson.Read<AuroraConfig>(File.ReadAllText(FilePath));
 
                     if (user != null)
                     {
@@ -379,7 +379,7 @@ namespace AuroraRP
 
             try
             {
-                File.WriteAllText(FilePath, JsonUtility.ToJson(_current, true));
+                File.WriteAllText(FilePath, AuroraJson.Write(_current));
             }
             catch (Exception e)
             {

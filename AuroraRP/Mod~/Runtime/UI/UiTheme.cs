@@ -86,13 +86,13 @@ namespace AuroraRP
 
             try
             {
-                var osFont = Font.CreateDynamicFontFromOSFont(candidates, 64);
+                var osFont = UnityEngine.Font.CreateDynamicFontFromOSFont(candidates, 64);
                 if (osFont == null)
                 {
                     // По одному имени (первое доступное).
                     foreach (var name in candidates)
                     {
-                        osFont = Font.CreateDynamicFontFromOSFont(name, 64);
+                        osFont = UnityEngine.Font.CreateDynamicFontFromOSFont(name, 64);
                         if (osFont != null)
                         {
                             break;

@@ -129,6 +129,15 @@ namespace AuroraRP
         /// <summary>Кто в сессии играет без AuroraRP (нужен мод-длл).</summary>
         IReadOnlyList<AuroraPeer> PeersWithoutMod { get; }
 
+        /// <summary>Стоит ли у этого игрока наш мод (для остальных работает «мост» хоста).</summary>
+        bool HasMod(byte peerId);
+
+        /// <summary>Сообщить хосту, какая сумма сейчас выставлена на перевод (0 = ничего).</summary>
+        void SendTransferIntent(long amount);
+
+        /// <summary>Попросить игрока проиграть эффект (деньги, покупка, перевод...).</summary>
+        void SendFxEvent(byte target, string name);
+
         /// <summary>
         /// Спавн через сетевой слой: в Fusion предмет появится у всех и станет сетевым.
         /// false — сеть недоступна, спавним локально (AssetSpawner).

@@ -279,7 +279,7 @@ namespace AuroraRP
                 {
                     try
                     {
-                        _manifest = JsonUtility.FromJson<PackManifest>(ReadText(entry));
+                        _manifest = AuroraJson.Read<PackManifest>(ReadText(entry));
 
                         if (_manifest == null)
                         {

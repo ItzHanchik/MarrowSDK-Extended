@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using MelonLoader;
 using UnityEngine;
 
 namespace AuroraRP
@@ -220,14 +221,16 @@ namespace AuroraRP
             }
         }
 
-        public static Coroutine RunCoroutine(IEnumerator routine)
+        public static object RunCoroutine(IEnumerator routine)
         {
-            if (AuroraDriver.Instance == null)
+            if (routine == null)
             {
                 return null;
             }
 
-            return AuroraDriver.Instance.StartCoroutine(routine);
+            // MelonCoroutines работает с обычными (managed) IEnumerator —
+            // MonoBehaviour.StartCoroutine под IL2CPP ждёт Il2CppSystem-перечислитель.
+            return MelonCoroutines.Start(routine);
         }
 
         // ------------------------------------------------------------ обфускация

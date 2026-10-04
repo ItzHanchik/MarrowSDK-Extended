@@ -16,8 +16,8 @@ namespace AuroraRP
 
         public static RectTransform NewRect(string name, Transform parent)
         {
-            var go = new GameObject(name, typeof(RectTransform));
-            var rect = go.GetComponent<RectTransform>();
+            var go = new GameObject(name);
+            var rect = go.AddComponent<RectTransform>();
             rect.SetParent(parent, false);
             rect.localScale = Vector3.one;
             rect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -29,8 +29,8 @@ namespace AuroraRP
 
         public static Canvas NewCanvas(string name, Transform parent, Vector2 size, float worldScale, int sortingOrder = 4000)
         {
-            var go = new GameObject(name, typeof(RectTransform));
-            var rect = go.GetComponent<RectTransform>();
+            var go = new GameObject(name);
+            var rect = go.AddComponent<RectTransform>();
             rect.SetParent(parent, false);
             rect.localScale = new Vector3(worldScale, worldScale, worldScale);
             rect.sizeDelta = size;

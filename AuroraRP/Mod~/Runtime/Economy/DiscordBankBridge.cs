@@ -341,7 +341,7 @@ namespace AuroraRP
             {
                 if (File.Exists(AuroraStorage.BankCachePath))
                 {
-                    var loaded = JsonUtility.FromJson<MessageCache>(File.ReadAllText(AuroraStorage.BankCachePath));
+                    var loaded = AuroraJson.Read<MessageCache>(File.ReadAllText(AuroraStorage.BankCachePath));
                     if (loaded?.entries != null)
                     {
                         _cache.entries = loaded.entries;
@@ -358,7 +358,7 @@ namespace AuroraRP
         {
             try
             {
-                File.WriteAllText(AuroraStorage.BankCachePath, JsonUtility.ToJson(_cache, true));
+                File.WriteAllText(AuroraStorage.BankCachePath, AuroraJson.Write(_cache));
             }
             catch (Exception e)
             {

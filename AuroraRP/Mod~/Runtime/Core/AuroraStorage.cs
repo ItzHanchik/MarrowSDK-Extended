@@ -76,7 +76,7 @@ namespace AuroraRP
             {
                 if (File.Exists(ProfilePath))
                 {
-                    var p = UnityEngine.JsonUtility.FromJson<Profile>(File.ReadAllText(ProfilePath, Encoding.UTF8));
+                    var p = AuroraJson.Read<Profile>(File.ReadAllText(ProfilePath, Encoding.UTF8));
                     if (p != null)
                     {
                         return p;
@@ -100,7 +100,7 @@ namespace AuroraRP
 
             try
             {
-                File.WriteAllText(ProfilePath, UnityEngine.JsonUtility.ToJson(profile, true), Encoding.UTF8);
+                File.WriteAllText(ProfilePath, AuroraJson.Write(profile), Encoding.UTF8);
             }
             catch (Exception e)
             {
