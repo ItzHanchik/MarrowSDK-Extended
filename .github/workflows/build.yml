@@ -88,13 +88,16 @@ jobs:
             -p:BonelabDir="$PWD/stage/bonelab"
           ls -la out
 
-      - name: Thunderstore-пакет с плагином
+      - name: Thunderstore-пакет (плагин + мод, если он собрался)
         run: |
           cd AuroraRP/Thunderstore
-          mkdir -p Plugins
+          mkdir -p Plugins Mods
           cp ../../out/AuroraRPUpdater.dll Plugins/ || true
+          cp ../../out/AuroraRP.dll Mods/ || true
           rm -f ../../out/AuroraRP-Thunderstore-1.0.0.zip
-          zip -q -r ../../out/AuroraRP-Thunderstore-1.0.0.zip manifest.json README.md icon.png Plugins
+          zip -q -r ../../out/AuroraRP-Thunderstore-1.0.0.zip manifest.json README.md icon.png Plugins Mods
+          echo "--- что попало в пакет ---"
+          unzip -l ../../out/AuroraRP-Thunderstore-1.0.0.zip
 
       - name: Собрать палет-архив из закоммиченного контента (pallet.json + config)
         run: |
@@ -106,25 +109,28 @@ jobs:
         run: |
           mkdir -p stage/archive/AuroraRP-1.0.0
           git -c core.quotepath=false ls-files \
-            | grep -E '^(AuroraRP/|\.github/)|^(ПРОЧТИ_МЕНЯ\.md|README\.md|release-notes\.md|\.gitignore)$' \
+            | grep -E '^(AuroraRP/|\.github/)|^(ПРОЧТИ_МЕНЯ\.md|README\.md|release-notes\.md|\.gitignore|СОБРАТЬ_DLL\.cmd|собрать_dll\.sh)$' \
             > stage/archive/list.txt
           cat stage/archive/list.txt
           xargs -a stage/archive/list.txt cp --parents -t stage/archive/AuroraRP-1.0.0
           (cd stage/archive && zip -q -r "$GITHUB_WORKSPACE/out/AuroraRP-1.0.0-complete.zip" AuroraRP-1.0.0)
           unzip -l out/AuroraRP-1.0.0-complete.zip | tail -3
 
+      - name: Список файлов для релиза
+        run: |
+          mkdir -p release
+          for f in AuroraRPUpdater.dll AuroraRP-Thunderstore-1.0.0.zip AuroraRP-pallet-src-1.0.0.zip AuroraRP-1.0.0-complete.zip AuroraRP.dll; do
+            cp "out/$f" "release/$f" 2>/dev/null || true
+          done
+          echo "--- уедет в релиз ---"
+          ls -la release
+
       - name: Приложить файлы к релизу
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" \
-            out/AuroraRPUpdater.dll \
-            out/AuroraRP-Thunderstore-1.0.0.zip \
-            out/AuroraRP-pallet-src-1.0.0.zip \
-            out/AuroraRP-1.0.0-complete.zip \
-            --clobber \
-            || gh release upload "${GITHUB_REF_NAME}" out/AuroraRPUpdater.dll out/AuroraRP-Thunderstore-1.0.0.zip out/AuroraRP-pallet-src-1.0.0.zip out/AuroraRP-1.0.0-complete.zip --clobber
+          gh release upload "${GITHUB_REF_NAME}" release/* --clobber
 
       - name: Итог
         run: |
