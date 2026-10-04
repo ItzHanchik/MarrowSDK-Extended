@@ -98,6 +98,8 @@ namespace AuroraRP
         private float _lastPeerPoll;
 
         private bool _metadataApplied;
+        private int _metadataAttempts;
+        private float _lastMetadataAttempt;
         private bool _palletRequested;
         private int _palletAttempts;
         private float _lastPalletAttempt;
@@ -191,6 +193,20 @@ namespace AuroraRP
                 return;
             }
 
+            // Не спамим запросами: пока сервер применяет метаданные.
+            if (Time.realtimeSinceStartup - _lastMetadataAttempt < 3f)
+            {
+                return;
+            }
+
+            if (_metadataAttempts++ > 20)
+            {
+                _metadataApplied = true;
+                return;
+            }
+
+            _lastMetadataAttempt = Time.realtimeSinceStartup;
+
             try
             {
                 var metadata = LocalPlayer.Metadata?.Metadata;
@@ -201,13 +217,14 @@ namespace AuroraRP
 
                 string current = metadata.GetMetadata(ModMetadataKey);
 
-                if (current != AuroraRuntime.Version)
+                if (current == AuroraRuntime.Version)
                 {
-                    // TrySetMetadata у LocalPlayer сам разошлёт значение по сети.
-                    LocalPlayer.Metadata.Metadata.TrySetMetadata(ModMetadataKey, AuroraRuntime.Version);
+                    _metadataApplied = true;
+                    return;
                 }
 
-                _metadataApplied = current == AuroraRuntime.Version;
+                // TrySetMetadata у LocalPlayer сам разошлёт значение по сети.
+                LocalPlayer.Metadata.Metadata.TrySetMetadata(ModMetadataKey, AuroraRuntime.Version);
             }
             catch (Exception e)
             {
