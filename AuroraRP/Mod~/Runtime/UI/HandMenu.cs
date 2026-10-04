@@ -67,10 +67,6 @@ namespace AuroraRP
         private int _doorPage;
 
         private Transform _handAnchor;
-        private float _worldScale = 0.0011f;
-        private bool _tickErrorLogged;
-        private bool _subscribedInput;
-        private bool _subscribedState;
 
         private const int MaxRowsPerView = 5;
 
@@ -79,29 +75,6 @@ namespace AuroraRP
         // ------------------------------------------------------------ жизненный цикл
 
         public void Initialize()
-        {
-            if (_rootGo != null)
-            {
-                return;
-            }
-
-            try
-            {
-                InitializeInternal();
-            }
-            catch (Exception e)
-            {
-                AuroraLog.Exception(e, "menu build");
-
-                if (_rootGo != null)
-                {
-                    UnityEngine.Object.Destroy(_rootGo);
-                    _rootGo = null;
-                }
-            }
-        }
-
-        private void InitializeInternal()
         {
             if (_rootGo != null)
             {
@@ -122,9 +95,7 @@ namespace AuroraRP
             _rootGo = new GameObject("AuroraRP_Menu");
             _rootGo.transform.SetParent(parent, false);
 
-            _worldScale = 0.0011f * UiTheme.Scale;
-
-            _canvas = UiKit.NewCanvas("Canvas", _rootGo.transform, new Vector2(UiTheme.PanelWidth, UiTheme.PanelHeight), _worldScale);
+            _canvas = UiKit.NewCanvas("Canvas", _rootGo.transform, new Vector2(UiTheme.PanelWidth, UiTheme.PanelHeight), 0.0011f * UiTheme.Scale);
             _group = _canvas.GetComponent<CanvasGroup>();
             _panel = _canvas.GetComponent<RectTransform>();
 
@@ -135,37 +106,23 @@ namespace AuroraRP
             _pointer = new UiPointer(_rootGo.transform);
 
             _openK = 0f;
-            ApplyPanelScale(0f);
+            _panel.localScale = Vector3.one * 0.01f;
             _group.alpha = 0f;
 
-            EnsureSubscriptions();
-
-            RefreshPage();
-            AuroraLog.Info("Меню создано");
-        }
-
-        /// <summary>
-        /// Подписка на ввод/состояние. Делается отдельным методом: если в момент создания
-        /// меню сервис ещё не был готов, подпишемся при первом тике, а не останемся без жеста.
-        /// </summary>
-        private void EnsureSubscriptions()
-        {
-            var input = AuroraRuntime.Input;
-
-            if (input != null && !_subscribedInput)
+            if (AuroraRuntime.Input != null)
             {
-                input.OnMenuGesture += Toggle;
-                input.OnXPressed += OpenTransfer;
-                _subscribedInput = true;
+                AuroraRuntime.Input.OnMenuGesture += Toggle;
+                AuroraRuntime.Input.OnXPressed += OpenTransfer;
             }
 
             var state = AuroraRuntime.State;
-
-            if (state != null && !_subscribedState)
+            if (state != null)
             {
                 state.OnChanged += MarkDirty;
-                _subscribedState = true;
             }
+
+            RefreshPage();
+            AuroraLog.Info("Меню создано");
         }
 
         public void Shutdown()
@@ -176,15 +133,11 @@ namespace AuroraRP
                 AuroraRuntime.Input.OnXPressed -= OpenTransfer;
             }
 
-            _subscribedInput = false;
-
             var state = AuroraRuntime.State;
             if (state != null)
             {
                 state.OnChanged -= MarkDirty;
             }
-
-            _subscribedState = false;
 
             if (_rootGo != null)
             {
@@ -569,32 +522,10 @@ namespace AuroraRP
         /// <summary>Пересчитывает масштаб канваса (изменение размера меню в настройках).</summary>
         public void ApplyScale()
         {
-            _worldScale = 0.0011f * UiTheme.Scale;
-
             if (_canvas != null)
             {
-                _canvas.transform.localScale = Vector3.one * _worldScale;
+                _canvas.transform.localScale = Vector3.one * (0.0011f * UiTheme.Scale);
             }
-
-            ApplyPanelScale(_openK);
-        }
-
-        /// <summary>
-        /// Масштаб панели. ВАЖНО: мировой размер канваса (0.0011 × menuScale) умножаем на
-        /// анимацию открытия. Раньше здесь стоял просто (0.65 + 0.35k) — анимация затирала
-        /// мировой масштаб, панель раздувалась до сотен метров и меню было не видно.
-        /// </summary>
-        private void ApplyPanelScale(float k)
-        {
-            if (_panel == null)
-            {
-                return;
-            }
-
-            float anim = 0.65f + 0.35f * Mathf.Clamp01(k);
-            float scale = _worldScale * anim;
-
-            _panel.localScale = new Vector3(scale, scale, scale);
         }
 
         internal void AddProgress(string caption, float value, Color color, out AuroraBar bar)
@@ -636,22 +567,6 @@ namespace AuroraRP
 
         public void Tick(float dt)
         {
-            try
-            {
-                TickInternal(dt);
-            }
-            catch (Exception e)
-            {
-                if (!_tickErrorLogged)
-                {
-                    _tickErrorLogged = true;
-                    AuroraLog.Exception(e, "menu tick");
-                }
-            }
-        }
-
-        private void TickInternal(float dt)
-        {
             if (_rootGo == null)
             {
                 if (GameHooks.PlayerReady)
@@ -661,8 +576,6 @@ namespace AuroraRP
 
                 return;
             }
-
-            EnsureSubscriptions();
 
             AuroraNotifications.Tick();
             UiHitRegistry.Sweep();
@@ -681,7 +594,7 @@ namespace AuroraRP
 
             float k = Mathf.SmoothStep(0f, 1f, _openK);
             _group.alpha = k;
-            ApplyPanelScale(k);
+            _panel.localScale = Vector3.one * (0.65f + 0.35f * k);
 
             _pointer?.SetVisible(k > 0.35f);
             _pointer?.Tick(dt, _panel);
@@ -873,12 +786,6 @@ namespace AuroraRP
                 Initialize();
             }
 
-            if (_rootGo == null)
-            {
-                AuroraLog.Warn("Меню: панель ещё не создана (нет руки игрока) — жест пропущен.");
-                return;
-            }
-
             if (IsOpen)
             {
                 Close();
@@ -891,35 +798,11 @@ namespace AuroraRP
 
         public void Open(MenuPage page = MenuPage.Main)
         {
-            if (_rootGo == null)
-            {
-                if (GameHooks.PlayerReady)
-                {
-                    Initialize();
-                }
-
-                if (_rootGo == null)
-                {
-                    return;
-                }
-            }
-
             IsOpen = true;
             CurrentPage = page;
             RefreshPage();
             AuroraRuntime.Sfx?.Play(AuroraSfx.Kind.Open);
             AuroraRuntime.Input?.Haptic(Il2CppSLZ.Marrow.Interaction.Handedness.BOTH, 0.2f, 0.1f);
-
-            // Диагностика: размер панели в метрах. Должно быть ~0.68 × 0.84 м.
-            try
-            {
-                float scale = _panel.localScale.x;
-                AuroraLog.Info("Меню открыто: масштаб {0:0.00000}, панель {1:0.00}×{2:0.00} м",
-                    scale, UiTheme.PanelWidth * scale, UiTheme.PanelHeight * scale);
-            }
-            catch (Exception)
-            {
-            }
         }
 
         public void Close()
