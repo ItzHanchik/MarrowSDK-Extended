@@ -164,6 +164,13 @@ namespace AuroraRP
         /// <summary>Иконка по имени (рисуется кодом).</summary>
         public static Sprite Icon(string name)
         {
+            // Красота из палета: Icon_coin, Icon_wallet и т.д. Если её нет — рисуем сами.
+            var fromPallet = AuroraVisuals.GetSprite(name);
+            if (fromPallet != null)
+            {
+                return fromPallet;
+            }
+
             if (Icons.TryGetValue(name, out var sprite))
             {
                 return sprite;

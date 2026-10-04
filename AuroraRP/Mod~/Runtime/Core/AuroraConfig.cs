@@ -249,6 +249,20 @@ namespace AuroraRP
         /// <summary>На сколько метров можно сместиться за удержание (чтобы это не была ходьба через дверь).</summary>
         public float passiveDoorStandStill = 0.5f;
 
+        // ------------------------------------------------------ красота (в палете)
+
+        /// <summary>Брать иконки, скин меню, партиклы и звуки из палета AuroraRP.</summary>
+        public bool usePalletVisuals = true;
+
+        /// <summary>Barcode спавнабла с визуалом (иконки, скин, эффекты, звуки).</summary>
+        public string visualSetBarcode = "ItzHanchik.AuroraRP.Spawnable.VisualSet";
+
+        /// <summary>Показывать эффект передачи денег (пачка купюр летит из руки в руку).</summary>
+        public bool transferFxEnabled = true;
+
+        /// <summary>Сколько секунд летит купюра, сек.</summary>
+        public float transferFxSeconds = 0.5f;
+
         // ------------------------------------------------------------------ загрузка/сохранение
 
         [NonSerialized] private static AuroraConfig _current;
@@ -370,6 +384,7 @@ namespace AuroraRP
             if (passiveTransferAmount < 0) passiveTransferAmount = 0;
             if (passiveTransferHoldSeconds < 0.5f) passiveTransferHoldSeconds = 0.5f;
             if (passiveDoorHoldSeconds < 1f) passiveDoorHoldSeconds = 1f;
+            if (transferFxSeconds < 0.1f) transferFxSeconds = 0.1f;
             if (startBalance < 0) startBalance = 0;
             if (transferHoldSeconds < 0.5f) transferHoldSeconds = 0.5f;
             if (doorPrice < 0) doorPrice = 0;

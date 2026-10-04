@@ -101,6 +101,7 @@ namespace AuroraRP
 
             try
             {
+                AuroraVisuals.Shutdown();
                 Menu?.Shutdown();
                 Bank?.FlushNow();
                 Doors?.Save();
@@ -139,6 +140,7 @@ namespace AuroraRP
             Craft?.Tick(dt);
             NameTags?.Tick(dt);
             Bridge?.Tick(dt);
+            AuroraVisuals.Tick(dt);
         }
 
         // -------------------------------------------------------------- утилиты

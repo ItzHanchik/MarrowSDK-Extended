@@ -21,11 +21,16 @@ namespace AuroraRP.EditorTools
         public const string TerminalBarcode = "ItzHanchik.AuroraRP.Spawnable.Terminal";
         public const string PrinterBarcode = "ItzHanchik.AuroraRP.Spawnable.MoneyPrinter";
 
+        /// <summary>Спавнабл «вся красота»: иконки, скин меню, партиклы, купюры, звуки.</summary>
+        public const string VisualSetBarcode = "ItzHanchik.AuroraRP.Spawnable.VisualSet";
+
         private const string PalletFolder = "Assets/AuroraRP/Pallet";
         private const string PrefabFolder = "Assets/AuroraRP/Pallet/Prefabs";
         private const string MaterialFolder = "Assets/AuroraRP/Pallet/Materials";
+        private const string SpriteFolder = "Assets/AuroraRP/Pallet/Sprites";
+        private const string AudioFolder = "Assets/AuroraRP/Pallet/Audio";
 
-        [MenuItem("AuroraRP/2. Создать контент палета (терминал + принтер)", false, 2)]
+        [MenuItem("AuroraRP/2. Создать контент палета (терминал + принтер + красота)", false, 2)]
         public static void CreateContent()
         {
             try
@@ -33,15 +38,17 @@ namespace AuroraRP.EditorTools
                 var pallet = GetOrCreatePallet();
                 var terminalPrefab = CreateTerminalPrefab();
                 var printerPrefab = CreatePrinterPrefab();
+                var visualPrefab = CreateVisualSetPrefab();
 
                 CreateSpawnableCrate(pallet, "Aurora Terminal", terminalPrefab, TerminalBarcode);
                 CreateSpawnableCrate(pallet, "Aurora Money Printer", printerPrefab, PrinterBarcode);
+                CreateSpawnableCrate(pallet, "Aurora Visual Set", visualPrefab, VisualSetBarcode);
 
                 EditorUtility.SetDirty(pallet);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
-                Debug.Log("[AuroraRP] Контент палета создан: терминал + принтер денег.");
+                Debug.Log("[AuroraRP] Контент палета создан: терминал + принтер + набор красоты (VisualSet).");
 
                 EditorGUIUtility.PingObject(pallet);
                 Selection.activeObject = pallet;
@@ -102,6 +109,8 @@ namespace AuroraRP.EditorTools
             CreateFolder(PalletFolder);
             CreateFolder(PrefabFolder);
             CreateFolder(MaterialFolder);
+            CreateFolder(SpriteFolder);
+            CreateFolder(AudioFolder);
         }
 
         private static void CreateFolder(string path)
@@ -213,6 +222,289 @@ namespace AuroraRP.EditorTools
             finally
             {
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        // ------------------------------------------------------- набор красоты (VisualSet)
+
+        /// <summary>
+        /// Префаб «вся красота»: код мода ищет объекты по именам (MenuSkin, Icon_*, Fx_*,
+        /// Prop_Cash, Sfx_*) и берёт из них материалы, спрайты, партиклы и звуки.
+        /// Сюда можно положить свои модельки, текстуры и эффекты — DLL менять не нужно.
+        /// </summary>
+        public static string CreateVisualSetPrefab()
+        {
+            string path = Path.Combine(PrefabFolder, "AuroraVisualSet.prefab").Replace('\\', '/');
+
+            var root = new GameObject("AuroraRP VisualSet");
+            try
+            {
+                var rigidbody = root.AddComponent<Rigidbody>();
+                rigidbody.mass = 4f;
+                rigidbody.useGravity = false;
+                rigidbody.isKinematic = true;
+
+                var collider = root.AddComponent<BoxCollider>();
+                collider.size = new Vector3(0.4f, 0.4f, 0.4f);
+                collider.isTrigger = true;
+
+                root.AddComponent<Poolee>();
+                root.AddComponent<MarrowEntity>();
+                root.AddComponent<MarrowBody>();
+
+                BuildVisualChildren(root.transform);
+                return SavePrefab(root, path);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void BuildVisualChildren(Transform root)
+        {
+            // 1) Скин меню — спрайт 512x512, ставится фоном панели.
+            var menuSkin = CreateSpriteAsset("MenuSkin", 256, new Color(0.06f, 0.10f, 0.18f), new Color(0.30f, 0.85f, 1f));
+            AddSprite(root, "MenuSkin", menuSkin, new Vector3(-0.4f, 0f, 0f));
+
+            // 2) Иконки: имена совпадают с теми, что рисует UiTheme.
+            // Имена — ровно те, что просят страницы меню (UiTheme.Icon) и подписи ролей.
+            string[] icons =
+            {
+                "coin", "cash", "wallet", "gun", "door", "contract", "gear",
+                "info", "users", "skull", "star", "shield",
+                "police", "dealer", "hitman", "smuggler", "gangster", "citizen", "role"
+            };
+
+            for (int i = 0; i < icons.Length; i++)
+            {
+                var sprite = CreateSpriteAsset("Icon_" + icons[i], 96, new Color(0.10f, 0.16f, 0.26f), new Color(0.75f, 0.92f, 1f));
+                AddSprite(root, "Icon_" + icons[i], sprite, new Vector3(-0.3f + i * 0.05f, 0.3f, 0f));
+            }
+
+            // 3) Эффекты: партиклы перевода и получения денег.
+            var moneyMat = CreateMaterial("FxMoney", new Color(0.55f, 0.9f, 0.45f), new Color(0.35f, 1f, 0.3f), 0.2f, 0.7f);
+            CreateParticles(root, "Fx_Transfer", moneyMat, 26, new Color(0.65f, 1f, 0.6f), 1.4f);
+            CreateParticles(root, "Fx_Receive", moneyMat, 34, new Color(1f, 0.95f, 0.55f), 1.8f);
+
+            // 4) Пачка купюр, которая летит из руки в руку.
+            var cashMat = CreateMaterial("CashBundle", new Color(0.45f, 0.66f, 0.32f), new Color(0.2f, 0.6f, 0.15f), 0.05f, 0.4f);
+            var cash = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cash.name = "Prop_Cash";
+            cash.transform.SetParent(root, false);
+            cash.transform.localScale = new Vector3(0.11f, 0.035f, 0.06f);
+            cash.transform.localPosition = new Vector3(0.25f, 0.15f, 0f);
+
+            var cashCollider = cash.GetComponent<Collider>();
+            if (cashCollider != null)
+            {
+                Object.DestroyImmediate(cashCollider);
+            }
+
+            var cashRenderer = cash.GetComponent<MeshRenderer>();
+            if (cashRenderer != null)
+            {
+                cashRenderer.sharedMaterial = cashMat;
+            }
+
+            // 5) Звуки: кладутся в палет как обычные wav-ассеты.
+            AddSound(root, "Sfx_SendMoney", CreateCoinWav("AuroraCoin", 0.55f, 1180f, 1560f));
+            AddSound(root, "Sfx_ReceiveMoney", CreateCoinWav("AuroraReceive", 0.7f, 880f, 1320f));
+
+            // 6) Материал палета, если художник захочет перекрасить меню из палета.
+            var accent = CreateMaterial("MenuAccent", new Color(0.30f, 0.88f, 1f), new Color(0.25f, 0.8f, 1f), 0.3f, 0.8f);
+            var accentGo = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            accentGo.name = "MenuAccent";
+            accentGo.transform.SetParent(root, false);
+            accentGo.transform.localPosition = new Vector3(-0.25f, -0.2f, 0f);
+
+            var accentCollider = accentGo.GetComponent<Collider>();
+            if (accentCollider != null)
+            {
+                Object.DestroyImmediate(accentCollider);
+            }
+
+            var accentRenderer = accentGo.GetComponent<MeshRenderer>();
+            if (accentRenderer != null)
+            {
+                accentRenderer.sharedMaterial = accent;
+            }
+        }
+
+        private static void AddSprite(Transform parent, string name, Sprite sprite, Vector3 localPosition)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPosition;
+            go.transform.localScale = Vector3.one * 0.1f;
+
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+        }
+
+        private static void AddSound(Transform parent, string name, AudioClip clip)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+
+            var source = go.AddComponent<AudioSource>();
+            source.clip = clip;
+            source.playOnAwake = false;
+            source.spatialBlend = 0f;
+        }
+
+        private static void CreateParticles(Transform parent, string name, Material material, int count, Color color, float lifetime)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+
+            var system = go.AddComponent<ParticleSystem>();
+            var main = system.main;
+            main.duration = 1.2f;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.startLifetime = lifetime;
+            main.startSpeed = 1.1f;
+            main.startSize = 0.055f;
+            main.startColor = color;
+            main.maxParticles = count * 4;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.gravityModifier = -0.15f;
+
+            var emission = system.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)count) });
+
+            var shape = system.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.12f;
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = material;
+                renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            }
+
+            system.Stop();
+        }
+
+        // ---------------------------------------------------- генерация ассетов
+
+        private static Sprite CreateSpriteAsset(string name, int size, Color background, Color border)
+        {
+            string path = Path.Combine(SpriteFolder, name + ".png").Replace('\\', '/');
+
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float radius = size * 0.5f - 2f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - size * 0.5f;
+                    float dy = y - size * 0.5f;
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    Color color = background;
+                    color.a = distance <= radius ? 1f : 0f;
+
+                    if (distance > radius - 3f && distance <= radius)
+                    {
+                        color = border;
+                        color.a = 1f;
+                    }
+
+                    texture.SetPixel(x, y, color);
+                }
+            }
+
+            texture.Apply();
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        /// <summary>Короткий «звон монет» — обычный wav, который потом можно заменить своим.</summary>
+        private static AudioClip CreateCoinWav(string name, float duration, float first, float second)
+        {
+            string path = Path.Combine(AudioFolder, name + ".wav").Replace('\\', '/');
+
+            var existing = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            const int rate = 44100;
+            int samples = Mathf.Max(1, Mathf.RoundToInt(rate * duration));
+            var data = new short[samples];
+
+            for (int i = 0; i < samples; i++)
+            {
+                float t = i / (float)rate;
+                float envelope = Mathf.Exp(-t * 9f);
+
+                float value =
+                    Mathf.Sin(2f * Mathf.PI * first * t) * 0.55f +
+                    Mathf.Sin(2f * Mathf.PI * second * t) * 0.35f * Mathf.Exp(-t * 16f) +
+                    Mathf.Sin(2f * Mathf.PI * first * 1.5f * t) * 0.2f * Mathf.Exp(-t * 24f);
+
+                data[i] = (short)Mathf.Clamp(Mathf.RoundToInt(value * envelope * 12000f), short.MinValue, short.MaxValue);
+            }
+
+            WriteWav(path, data, rate);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+        }
+
+        private static void WriteWav(string path, short[] samples, int rate)
+        {
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write))
+            using (var writer = new BinaryWriter(stream))
+            {
+                int dataSize = samples.Length * 2;
+
+                writer.Write(new[] { 'R', 'I', 'F', 'F' });
+                writer.Write(36 + dataSize);
+                writer.Write(new[] { 'W', 'A', 'V', 'E' });
+                writer.Write(new[] { 'f', 'm', 't', ' ' });
+                writer.Write(16);
+                writer.Write((short)1);
+                writer.Write((short)1);
+                writer.Write(rate);
+                writer.Write(rate * 2);
+                writer.Write((short)2);
+                writer.Write((short)16);
+                writer.Write(new[] { 'd', 'a', 't', 'a' });
+                writer.Write(dataSize);
+
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    writer.Write(samples[i]);
+                }
             }
         }
 

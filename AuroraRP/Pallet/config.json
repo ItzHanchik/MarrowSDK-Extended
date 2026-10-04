@@ -48,6 +48,11 @@
   "printerInterval": 30.0,
   "printerPayout": 250,
 
+  "usePalletVisuals": true,
+  "visualSetBarcode": "ItzHanchik.AuroraRP.Spawnable.VisualSet",
+  "transferFxEnabled": true,
+  "transferFxSeconds": 0.5,
+
   "peerBridgeEnabled": true,
   "passiveTransferAmount": 500,
   "passiveTransferHoldSeconds": 5.0,

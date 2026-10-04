@@ -13,7 +13,10 @@ namespace AuroraRP
         StateSync = 2,   // хост -> клиенты: полный снимок состояния
         Notify = 3,      // уведомление конкретному игроку
         SpawnItem = 4,   // хост -> клиент: заспавни предмет рядом со мной
-        Action = 5       // запрос клиента к хосту (см. AuroraAction)
+        Action = 5,      // запрос клиента к хосту (см. AuroraAction)
+
+        /// <summary>Хост просит клиента проиграть эффект из палета (деньги, покупка...).</summary>
+        FxEvent = 6
     }
 
     /// <summary>Действия, которые применяет хост.</summary>
@@ -386,6 +389,20 @@ namespace AuroraRP
                 w.Write(owner);
                 w.Write(amount);
             }));
+        }
+
+        /// <summary>Просит игрока проиграть эффект из палета (например, «money.receive»).</summary>
+        public void SendFxEvent(byte target, string name)
+        {
+            if (target == LocalId)
+            {
+                AuroraVisuals.PlayFxEvent(name);
+                return;
+            }
+
+            var data = AuroraWire.Build(w => w.Write(name ?? ""));
+
+            Send(new AuroraNetMsg(AuroraMsgType.FxEvent, LocalId, data), target);
         }
 
         public void SendNotification(byte target, string text, string colorHex)

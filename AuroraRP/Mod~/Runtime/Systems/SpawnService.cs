@@ -67,8 +67,23 @@ namespace AuroraRP
             };
         }
 
-        /// <summary>Заспавнить предмет. Ошибки не бросает — просто логирует.</summary>
+        /// <summary>Заспавнить предмет (в сети — так, чтобы его увидели все).</summary>
         public bool TrySpawn(string barcode, Vector3 position, Quaternion rotation, out string error, Action<GameObject> callback = null)
+        {
+            return SpawnInternal(barcode, position, rotation, true, out error, callback);
+        }
+
+        /// <summary>
+        /// Заспавнить предмет локально: нужно для служебных вещей вроде набора красоты
+        /// из палета — он не должен появляться у остальных игроков.
+        /// </summary>
+        public bool TrySpawnLocal(string barcode, Vector3 position, Quaternion rotation, out string error, Action<GameObject> callback = null)
+        {
+            return SpawnInternal(barcode, position, rotation, false, out error, callback);
+        }
+
+        /// <summary>Спавн. Ошибки не бросает — просто логирует.</summary>
+        private bool SpawnInternal(string barcode, Vector3 position, Quaternion rotation, bool allowNetwork, out string error, Action<GameObject> callback = null)
         {
             error = null;
 
@@ -91,7 +106,7 @@ namespace AuroraRP
             // Проверку Exists здесь пропускаем — локально палета может ещё не быть.
             var net = AuroraRuntime.Net;
 
-            if (net != null && net.IsConnected && net.TryNetworkSpawn(barcode, position, rotation, callback))
+            if (allowNetwork && net != null && net.IsConnected && net.TryNetworkSpawn(barcode, position, rotation, callback))
             {
                 AuroraLog.Info("Сетевой спавн {0}", barcode);
                 return true;

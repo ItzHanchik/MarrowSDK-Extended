@@ -106,6 +106,13 @@ namespace AuroraRP
 
         private static AudioClip Get(Kind kind)
         {
+            // Красота из палета: Sfx_SendMoney, Sfx_Click и т.д. Нет — играем синтезированный.
+            var fromPallet = AuroraVisuals.GetSound("Sfx_" + kind);
+            if (fromPallet != null)
+            {
+                return fromPallet;
+            }
+
             if (Clips.Count == 0)
             {
                 Initialize();

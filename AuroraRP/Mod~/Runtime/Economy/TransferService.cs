@@ -232,7 +232,37 @@ namespace AuroraRP
             }
 
             AuroraRuntime.Sfx?.Play(AuroraSfx.Kind.SendMoney, 0.1f);
+            PlayTransferFx(target);
             OnTransferCompleted?.Invoke();
+        }
+
+        /// <summary>Красота из палета: пачка купюр летит из нашей руки в руку получателя.</summary>
+        private void PlayTransferFx(byte target)
+        {
+            try
+            {
+                var myHand = BoneLib.Player.RightHand;
+                Vector3 from = myHand != null ? myHand.transform.position : Vector3.zero;
+                Vector3 to = from;
+
+                if (AuroraRuntime.Net != null && AuroraRuntime.Net.TryGetPeerHands(target, out var left, out var right))
+                {
+                    if (right.HasValue)
+                    {
+                        to = right.Value;
+                    }
+                    else if (left.HasValue)
+                    {
+                        to = left.Value;
+                    }
+                }
+
+                AuroraVisuals.PlayTransferFx(from, to);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "transfer fx");
+            }
         }
 
         private void ResetHold()

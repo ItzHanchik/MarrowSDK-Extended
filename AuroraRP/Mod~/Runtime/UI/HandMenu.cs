@@ -163,6 +163,15 @@ namespace AuroraRP
             UiKit.Panel("Backdrop", _panel, new Vector2(UiTheme.PanelWidth, UiTheme.PanelHeight), UiTheme.Backdrop, 1f, true);
             var core = UiKit.Panel("Core", _panel, new Vector2(UiTheme.PanelWidth, UiTheme.PanelHeight), UiTheme.Panel, 1f, false);
 
+            // Скин меню из палета (MenuSkin): если художник его положил — используем.
+            var skin = AuroraVisuals.GetSprite("MenuSkin");
+            if (skin != null)
+            {
+                core.sprite = skin;
+                core.type = Image.Type.Sliced;
+                core.color = new Color(1f, 1f, 1f, 0.98f);
+            }
+
             // Верхний градиентный блик
             var gradient = UiKit.NewImage("Gradient", core.rectTransform, UiTheme.Gradient, UiTheme.Accent.WithAlpha(0.14f));
             gradient.rectTransform.sizeDelta = new Vector2(UiTheme.PanelWidth, UiTheme.PanelHeight * 0.5f);

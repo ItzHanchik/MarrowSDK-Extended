@@ -125,6 +125,10 @@ namespace AuroraRP
                         HandleSpawnItem(msg);
                         break;
 
+                    case AuroraMsgType.FxEvent:
+                        HandleFx(msg);
+                        break;
+
                     case AuroraMsgType.Action:
                         HandleAction(msg);
                         break;
@@ -177,6 +181,23 @@ namespace AuroraRP
 
             _state.ApplySnapshot(AuroraSnapshot.FromJson(json));
             _doors.LoadFromState();
+        }
+
+        private void HandleFx(AuroraNetMsg msg)
+        {
+            if (!AuroraRuntime.Net.IsHost && msg.Sender != AuroraRuntime.Net.HostId)
+            {
+                return;
+            }
+
+            string name = null;
+
+            AuroraWire.Read(msg.Data, r => name = r.ReadString());
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                AuroraVisuals.PlayFxEvent(name);
+            }
         }
 
         private void HandleNotify(AuroraNetMsg msg)
@@ -368,6 +389,9 @@ namespace AuroraRP
 
             AuroraRuntime.Notify(from, AuroraL.Get("money.transfer.sent", AuroraUtils.Money(amount), toName), UiTheme.Money);
             AuroraRuntime.Notify(to, AuroraL.Get("money.transfer.received", AuroraUtils.Money(amount), fromName), UiTheme.Success);
+
+            // Красота: получателю монеты прилетают из палета.
+            AuroraRuntime.Net?.SendFxEvent(to, AuroraVisuals.FxMoneyReceive);
         }
 
         public void ApplyRoleChange(byte player, AuroraRoleId role)
