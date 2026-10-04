@@ -3,6 +3,8 @@ AuroraRP/Mod~/bin/
 AuroraRP/Mod~/obj/
 AuroraRP/Builds/
 AuroraRP/Pallet/
+AuroraRP/Thunderstore/AuroraRP.dll
+AuroraRP/Thunderstore/*.zip
 *.zip
 
 # Unity

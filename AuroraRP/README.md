@@ -211,6 +211,12 @@ dotnet build AuroraRP.csproj -c Release -o bin -p:BonelabDir="C:\Program Files (
 
 ---
 
+## Файлы для публикации
+
+- `Docs/PUBLISHING.md` — пошагово: палет на mod.io (и `modioModId`), DLL на Thunderstore;
+- `Thunderstore/` — готовый пакет для Thunderstore: `manifest.json`, текст страницы,
+  иконка и скрипт `pack_thunderstore.cmd|sh` (собирает `Builds/AuroraRP-Thunderstore-<версия>.zip`).
+
 ## Частые вопросы
 
 **Палет не появился в игре.** Откройте меню мода → «Настройки» и посмотрите строку
