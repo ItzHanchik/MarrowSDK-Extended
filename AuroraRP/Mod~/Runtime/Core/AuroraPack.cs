@@ -69,6 +69,7 @@ namespace AuroraRP
         private static bool _jsonTried;
         private static bool _tried;
         private static bool _loaded;
+        private static bool _procedural;
 
         /// <summary>Пак вообще есть в этой сборке DLL?</summary>
         public static bool IsAvailable
@@ -87,6 +88,34 @@ namespace AuroraRP
 
         /// <summary>Пак загружен (бандлы разобраны, ассеты доступны)?</summary>
         public static bool IsLoaded => _loaded;
+
+        /// <summary>
+        /// Есть ли у мода свой контент вообще: пак из Unity внутри DLL или красота,
+        /// собранная кодом (модель купюр, принтер, терминал, вспышки).
+        /// По этому признаку спавн идёт «из DLL», не требуя палета.
+        /// </summary>
+        public static bool HasContent => _loaded || _procedural;
+
+        /// <summary>Красота собрана кодом (пак не нужен).</summary>
+        public static bool IsProcedural => _procedural;
+
+        /// <summary>Сообщает реестру, что контент собран кодом.</summary>
+        public static void MarkProcedural()
+        {
+            _procedural = true;
+        }
+
+        /// <summary>Регистрирует объект, собранный кодом, как обычный префаб пака.</summary>
+        public static void RegisterProceduralPart(string name, GameObject part)
+        {
+            if (string.IsNullOrEmpty(name) || part == null)
+            {
+                return;
+            }
+
+            _procedural = true;
+            Prefabs[name] = part;
+        }
 
         /// <summary>Версия контента из manifest.json.</summary>
         public static string Version => _version;
@@ -701,7 +730,35 @@ namespace AuroraRP
                 return null;
             }
 
-            return BarcodeToPrefab.TryGetValue(barcode, out var prefab) ? prefab : null;
+            if (BarcodeToPrefab.TryGetValue(barcode, out var prefab) && !string.IsNullOrEmpty(prefab))
+            {
+                return prefab;
+            }
+
+            // «Всё в DLL»: пак может быть пустым — тогда имена предметов берём из кодовой красоты.
+            if (!_procedural)
+            {
+                return null;
+            }
+
+            string lower = barcode.ToLowerInvariant();
+
+            if (lower.Contains("visualset"))
+            {
+                return AuroraProcedural.VisualSetName;
+            }
+
+            if (lower.Contains("terminal") || lower.Contains("atm"))
+            {
+                return AuroraProcedural.TerminalName;
+            }
+
+            if (lower.Contains("printer") || lower.Contains("cash") || lower.Contains("money"))
+            {
+                return AuroraProcedural.PrinterName;
+            }
+
+            return null;
         }
 
         public static Sprite GetSprite(string name)
@@ -732,7 +789,7 @@ namespace AuroraRP
         /// </summary>
         public static GameObject Instantiate(string prefabName, Vector3 position, Quaternion rotation, bool stripSpawnComponents = true)
         {
-            if (!_loaded && !EnsureLoaded())
+            if (!_loaded && !EnsureLoaded() && !_procedural)
             {
                 return null;
             }
@@ -756,6 +813,12 @@ namespace AuroraRP
                 if (stripSpawnComponents)
                 {
                     StripSpawnComponents(instance);
+                }
+
+                // Префабы кодовой красоты хранятся отключёнными (чтобы не висели в мире).
+                if (!instance.activeSelf)
+                {
+                    instance.SetActive(true);
                 }
 
                 return instance;
@@ -836,6 +899,7 @@ namespace AuroraRP
             BarcodeToPrefab.Clear();
 
             _loaded = false;
+            _procedural = false;
             _tried = false;
             _jsonTried = false;
             _configJson = null;

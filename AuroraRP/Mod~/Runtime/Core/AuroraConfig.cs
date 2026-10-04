@@ -258,7 +258,7 @@ namespace AuroraRP
         public bool useEmbeddedVisuals = true;
 
         /// <summary>Запасной путь: если в DLL пака нет — взять визуал из палета AuroraRP.</summary>
-        public bool usePalletVisuals = true;
+        public bool usePalletVisuals = false;
 
         /// <summary>Barcode спавнабла с визуалом (нужен только для палетного пути).</summary>
         public string visualSetBarcode = "ItzHanchik.AuroraRP.Spawnable.VisualSet";

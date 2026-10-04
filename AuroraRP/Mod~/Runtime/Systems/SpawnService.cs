@@ -113,7 +113,7 @@ namespace AuroraRP
 
             // «Всё в плагине»: предмет зашит в DLL — создаём его сами и рассылаем мод-игрокам,
             // не полагаясь ни на палеты, ни на спавнер LabFusion.
-            if (AuroraPack.IsAvailable && !string.IsNullOrEmpty(AuroraPack.PrefabNameForBarcode(barcode)) &&
+            if (AuroraPack.HasContent && !string.IsNullOrEmpty(AuroraPack.PrefabNameForBarcode(barcode)) &&
                 TrySpawnFromPack(barcode, position, rotation, allowNetwork, out error, callback))
             {
                 return true;
@@ -198,7 +198,7 @@ namespace AuroraRP
         {
             error = null;
 
-            if (!AuroraPack.IsAvailable)
+            if (!AuroraPack.HasContent)
             {
                 return false;
             }

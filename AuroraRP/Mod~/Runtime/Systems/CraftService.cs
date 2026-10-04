@@ -18,6 +18,7 @@ namespace AuroraRP
         private byte _heldPrinterOwner = 255;
         private AuroraComponent _heldPrinter;
         private bool _subscribed;
+        private bool _spawnSubscribed;
         private float _nextScan;
 
         public CraftService(AuroraState state)
@@ -37,6 +38,14 @@ namespace AuroraRP
             {
                 AuroraRuntime.Input.OnBPressed += OnButtonB;
                 _subscribed = true;
+            }
+
+            // Принтер может быть создан не только из палета, но и из внутриигрового пака DLL
+            // («всё в одном плагине») — ловим такие спавны и вешаем на них логику.
+            if (!_spawnSubscribed && AuroraRuntime.Spawn != null)
+            {
+                AuroraRuntime.Spawn.OnSpawned += OnSpawned;
+                _spawnSubscribed = true;
             }
 
             if (Time.realtimeSinceStartup < _nextScan)
@@ -95,17 +104,70 @@ namespace AuroraRP
                         continue;
                     }
 
-                    string hash = DoorService.BuildDoorHash(go, id);
-                    var behaviour = new PrinterBehaviour(go, hash, this);
-                    AuroraComponent.Attach(go, "printer", behaviour);
-                    _printers[instanceId] = behaviour;
-
-                    AuroraLog.Info("Найден принтер денег (hash {0})", hash);
+                    RegisterPrinter(go, id);
                 }
             }
             catch (Exception e)
             {
                 AuroraLog.Exception(e, "printer scan");
+            }
+        }
+
+        /// <summary>
+        /// Вешает логику принтера на объект: и на палетный, и на собранный кодом внутри DLL.
+        /// </summary>
+        public void RegisterPrinter(GameObject go, string barcode)
+        {
+            if (go == null)
+            {
+                return;
+            }
+
+            int instanceId = go.GetInstanceID();
+
+            if (_printers.ContainsKey(instanceId))
+            {
+                return;
+            }
+
+            try
+            {
+                string hash = DoorService.BuildDoorHash(go, barcode);
+                var behaviour = new PrinterBehaviour(go, hash, this);
+                AuroraComponent.Attach(go, "printer", behaviour);
+                _printers[instanceId] = behaviour;
+
+                AuroraLog.Info("Принтер денег подключён (hash {0})", hash);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "register printer");
+            }
+        }
+
+        private void OnSpawned(GameObject go, string barcode)
+        {
+            if (go == null || string.IsNullOrWhiteSpace(barcode))
+            {
+                return;
+            }
+
+            try
+            {
+                var cfg = AuroraConfig.Current;
+
+                bool printer = (!string.IsNullOrWhiteSpace(cfg.printerBarcode) && barcode.Equals(cfg.printerBarcode, StringComparison.OrdinalIgnoreCase))
+                               || (!string.IsNullOrWhiteSpace(cfg.contentBarcode) && barcode.Equals(cfg.contentBarcode, StringComparison.OrdinalIgnoreCase))
+                               || barcode.IndexOf("printer", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (printer)
+                {
+                    RegisterPrinter(go, barcode);
+                }
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "printer on spawned");
             }
         }
 

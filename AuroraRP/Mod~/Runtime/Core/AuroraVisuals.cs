@@ -44,12 +44,26 @@ namespace AuroraRP
             public bool Arc;
         }
 
+        /// <summary>Искра: летит, крутится и угасает без всяких ParticleSystem.</summary>
+        private sealed class Spark
+        {
+            public GameObject Go;
+            public SpriteRenderer Renderer;
+            public Vector3 Velocity;
+            public float Born;
+            public float Life;
+            public float Size;
+            public Color Color;
+        }
+
         private static readonly List<Flying> Flights = new List<Flying>();
         private static readonly List<KeyValuePair<GameObject, float>> Temp = new List<KeyValuePair<GameObject, float>>();
+        private static readonly List<Spark> Sparks = new List<Spark>();
 
         private static GameObject _holder;
         private static bool _loading;
         private static bool _packFailed;
+        private static bool _proceduralFailed;
         private static int _attempts;
         private static float _lastAttempt;
 
@@ -66,6 +80,7 @@ namespace AuroraRP
         {
             AdvanceFlights(dt);
             AdvanceTemp(dt);
+            AdvanceSparks(dt);
 
             var cfg = AuroraConfig.Current;
 
@@ -97,7 +112,14 @@ namespace AuroraRP
                 AuroraLog.Warn("Пак в DLL не разобрался — пробую палет и кодовые заглушки.");
             }
 
-            // 2) Палет (необязательный запасной путь).
+            // 2) Красота, собранная кодом: модели и вспышки из примитивов и спрайтов.
+            //    Работает всегда — пак и палет для неё не нужны.
+            if (cfg.useEmbeddedVisuals && !_proceduralFailed && TryLoadProcedural())
+            {
+                return;
+            }
+
+            // 3) Палет (необязательный запасной путь).
             if (!cfg.usePalletVisuals)
             {
                 return;
@@ -159,6 +181,44 @@ namespace AuroraRP
             }
 
             return Ready;
+        }
+
+        /// <summary>
+        /// Красота, собранная кодом: модель пачки купюр, принтер, терминал, вспышки.
+        /// Ни палета, ни пака не требуется — «всё в одной DLL» работает по-настоящему.
+        /// </summary>
+        private static bool TryLoadProcedural()
+        {
+            try
+            {
+                var set = AuroraProcedural.BuildAndRegister();
+
+                if (set == null)
+                {
+                    _proceduralFailed = true;
+                    return false;
+                }
+
+                _holder = set;
+                set.SetActive(false);
+
+                Parts[AuroraProcedural.CashName] = AuroraPack.FindPrefab(AuroraProcedural.CashName);
+                Parts[AuroraProcedural.PrinterName] = AuroraPack.FindPrefab(AuroraProcedural.PrinterName);
+                Parts[AuroraProcedural.TerminalName] = AuroraPack.FindPrefab(AuroraProcedural.TerminalName);
+                Parts[AuroraProcedural.TransferFxName] = AuroraPack.FindPrefab(AuroraProcedural.TransferFxName);
+                Parts[AuroraProcedural.ReceiveFxName] = AuroraPack.FindPrefab(AuroraProcedural.ReceiveFxName);
+
+                Ready = true;
+
+                AuroraLog.Info("Красота внутри DLL: кодовая версия (купюры, принтер, терминал, искры).");
+                return true;
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "procedural visuals");
+                _proceduralFailed = true;
+                return false;
+            }
         }
 
         /// <summary>Ассеты пака, лежащие в бандле отдельно от префаба (иконки, звуки, анимации).</summary>
@@ -332,6 +392,7 @@ namespace AuroraRP
         {
             Flights.Clear();
             Temp.Clear();
+            Sparks.Clear();
             AuroraPack.Shutdown();
 
             Sprites.Clear();
@@ -343,6 +404,7 @@ namespace AuroraRP
             Ready = false;
             _holder = null;
             _packFailed = false;
+            _proceduralFailed = false;
         }
 
         // ------------------------------------------------------------------- доступ
@@ -399,6 +461,7 @@ namespace AuroraRP
             }
 
             SpawnTemp("Fx_Transfer", from, 3f);
+            SpawnBurst(from, AuroraProcedural.Gold, 16, 1.5f);
 
             var cash = InstantiatePart("Prop_Cash", from, 2.5f);
 
@@ -463,6 +526,7 @@ namespace AuroraRP
             }
 
             SpawnTemp("Fx_Receive", at, 2f);
+            SpawnBurst(at, AuroraProcedural.Money, 22, 1.9f);
         }
 
         private static GameObject InstantiatePart(string name, Vector3 position, float life)
@@ -506,6 +570,112 @@ namespace AuroraRP
         private static void SpawnTemp(string name, Vector3 position, float life)
         {
             InstantiatePart(name, position, life);
+        }
+
+        /// <summary>Разлетающиеся искры: заменяют ParticleSystem и работают на любом рендере.</summary>
+        public static void SpawnBurst(Vector3 at, Color color, int count, float speed)
+        {
+            if (!AuroraConfig.Current.transferFxEnabled || count <= 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                try
+                {
+                    var go = new GameObject("AuroraSpark");
+                    go.transform.position = at;
+
+                    var renderer = go.AddComponent<SpriteRenderer>();
+                    renderer.sprite = UiTheme.Glow;
+
+                    float size = UnityEngine.Random.Range(0.03f, 0.08f);
+                    go.transform.localScale = new Vector3(size, size, 1f);
+                    go.transform.rotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
+
+                    var tint = new Color(color.r, color.g, color.b, 1f);
+                    renderer.color = tint;
+
+                    var direction = new Vector3(
+                        UnityEngine.Random.Range(-1f, 1f),
+                        UnityEngine.Random.Range(0.25f, 1.3f),
+                        UnityEngine.Random.Range(-1f, 1f));
+
+                    if (direction.sqrMagnitude < 0.01f)
+                    {
+                        direction = Vector3.up;
+                    }
+
+                    Sparks.Add(new Spark
+                    {
+                        Go = go,
+                        Renderer = renderer,
+                        Color = tint,
+                        Born = Time.realtimeSinceStartup,
+                        Life = UnityEngine.Random.Range(0.55f, 1.25f),
+                        Size = size,
+                        Velocity = direction.normalized * speed
+                    });
+                }
+                catch (Exception e)
+                {
+                    AuroraLog.Exception(e, "spark spawn");
+                    return;
+                }
+            }
+        }
+
+        private static void AdvanceSparks(float dt)
+        {
+            if (Sparks.Count == 0)
+            {
+                return;
+            }
+
+            float now = Time.realtimeSinceStartup;
+
+            for (int i = Sparks.Count - 1; i >= 0; i--)
+            {
+                var spark = Sparks[i];
+
+                if (spark.Go == null)
+                {
+                    Sparks.RemoveAt(i);
+                    continue;
+                }
+
+                float k = Mathf.Clamp01((now - spark.Born) / spark.Life);
+
+                if (k >= 1f)
+                {
+                    Sparks.RemoveAt(i);
+                    Release(spark.Go);
+                    continue;
+                }
+
+                try
+                {
+                    spark.Velocity += Vector3.down * (3.2f * dt);
+                    spark.Velocity *= (1f - 1.1f * dt);
+
+                    spark.Go.transform.position += spark.Velocity * dt;
+
+                    if (spark.Renderer != null)
+                    {
+                        var tint = spark.Color;
+                        tint.a = 1f - k;
+                        spark.Renderer.color = tint;
+                    }
+
+                    float scale = spark.Size * (1f - 0.45f * k);
+                    spark.Go.transform.localScale = new Vector3(scale, scale, 1f);
+                }
+                catch (Exception)
+                {
+                    Sparks.RemoveAt(i);
+                }
+            }
         }
 
         private static void AdvanceFlights(float dt)
