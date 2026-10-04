@@ -1,0 +1,85 @@
+name: Build AuroraRP
+
+# Запуск: вручную (Actions → Build AuroraRP → Run workflow) или автоматически при пуше тега.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'aurorarp-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Собрать плагин и упаковать релиз
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: MelonLoader 0.6.6 (нужен только MelonLoader.dll и net6-зависимости)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p stage/melon stage/bonelab
+          gh release download v0.6.6 -R LavaGang/MelonLoader -p "MelonLoader.x64.zip" -D stage/melon
+          unzip -q stage/melon/MelonLoader.x64.zip -d stage/bonelab
+          echo "--- что приехало ---"
+          ls stage/bonelab | head -20
+          ls stage/bonelab/net6 | head -20
+
+      - name: Собрать AuroraRPUpdater.dll
+        run: |
+          dotnet build AuroraRP/Updater/AuroraRPUpdater.csproj \
+            -c Release -o out \
+            -p:BonelabDir="$PWD/stage/bonelab"
+          ls -la out
+
+      - name: Собрать мод (если в секретах есть ссылка на игровые сборки)
+        env:
+          ASSEMBLIES_URL: ${{ secrets.BONELAB_ASSEMBLIES_URL }}
+        run: |
+          if [ -z "$ASSEMBLIES_URL" ]; then
+            echo "BONELAB_ASSEMBLIES_URL не задан — пропускаю сборку мода."
+            echo "(Игровые сборки нельзя выкладывать: их достаёт Unity или игра.)"
+            exit 0
+          fi
+          mkdir -p stage/bonelab/Il2CppAssemblies
+          curl -sSL "$ASSEMBLIES_URL" -o stage/assemblies.zip
+          unzip -q stage/assemblies.zip -d stage/bonelab/Il2CppAssemblies
+          dotnet build "AuroraRP/Mod~/AuroraRP.csproj" \
+            -c Release -o out \
+            -p:BonelabDir="$PWD/stage/bonelab" || \
+            echo "Сборка мода не удалась — соберёшь её в Unity (AuroraRP → 3. СОБРАТЬ ВСЁ)."
+
+      - name: Thunderstore-пакет с плагином
+        run: |
+          cd AuroraRP/Thunderstore
+          mkdir -p Plugins
+          cp ../../out/AuroraRPUpdater.dll Plugins/ || true
+          rm -f ../../out/AuroraRP-Thunderstore-1.0.0.zip
+          zip -q -r ../../out/AuroraRP-Thunderstore-1.0.0.zip manifest.json README.md icon.png Plugins
+
+      - name: Приложить файлы к релизу
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" \
+            out/AuroraRPUpdater.dll \
+            out/AuroraRP-Thunderstore-1.0.0.zip \
+            --clobber
+
+      - name: Артефакты
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraRP-build
+          path: out/*
+          if-no-files-found: warn
