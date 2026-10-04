@@ -1,0 +1,77 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AuroraRP — проект сборки мода (MelonLoader + BoneLib, опционально LabFusion).
+
+    Быстрый старт:
+        dotnet build AuroraRP.csproj -c Release -o bin
+
+    Если BONELAB лежит не в Steam по умолчанию, укажите путь:
+        dotnet build AuroraRP.csproj -c Release -o bin -p:BonelabDir="D:\Games\BONELAB"
+
+    Unity-меню «AuroraRP → 3. СОБРАТЬ ВСЁ» генерирует этот файл автоматически
+    с точными путями к вашей установке игры.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>AuroraRP</AssemblyName>
+    <RootNamespace>AuroraRP</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>none</DebugType>
+    <NoWarn>CS0436;CS0169;CS0649;CS0162;CS0414;CS0108;CS0114</NoWarn>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+  </PropertyGroup>
+
+  <!-- Пути к игре. BonelabDir можно переопределить при сборке. -->
+  <PropertyGroup>
+    <BonelabDir Condition="'$(BonelabDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\BONELAB</BonelabDir>
+    <Il2CppDir>$(BonelabDir)\BONELAB_Data\il2cpp\MelonLoader\Il2CppAssemblies</Il2CppDir>
+    <MelonDir>$(BonelabDir)\MelonLoader</MelonDir>
+    <ModsDir>$(BonelabDir)\Mods</ModsDir>
+    <HasFusion Condition="Exists('$(ModsDir)\LabFusion.dll')">true</HasFusion>
+  </PropertyGroup>
+
+  <!-- LabFusion есть — включаем мультиплеерную часть. -->
+  <PropertyGroup Condition="'$(HasFusion)' == 'true'">
+    <DefineConstants>$(DefineConstants);AURORA_FUSION</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Runtime\**\*.cs" />
+  </ItemGroup>
+
+  <!-- Сборки игры (IL2CPP interop) + MelonLoader + моды-зависимости. -->
+  <ItemGroup>
+    <Reference Include="$(Il2CppDir)\*.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(MelonDir)\*.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(MelonDir)\net6\*.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(ModsDir)\BoneLib.dll">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="$(ModsDir)\LabFusion.dll" Condition="Exists('$(ModsDir)\LabFusion.dll')">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="AuroraCheckPaths" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(Il2CppDir)')"
+           Text="Не найдена папка IL2CPP-сборок: $(Il2CppDir). Укажите путь к игре: dotnet build AuroraRP.csproj -c Release -o bin -p:BonelabDir=&quot;ПУТЬ\К\BONELAB&quot;" />
+    <Error Condition="!Exists('$(ModsDir)\BoneLib.dll')"
+           Text="В $(ModsDir) нет BoneLib.dll. Установите BoneLib (MelonLoader-мод) — AuroraRP работает поверх него." />
+    <Message Importance="high" Text="AuroraRP: LabFusion найден — сборка с мультиплеером." Condition="'$(HasFusion)' == 'true'" />
+    <Message Importance="high" Text="AuroraRP: LabFusion не найден — сборка только для одиночной игры." Condition="'$(HasFusion)' != 'true'" />
+  </Target>
+
+</Project>

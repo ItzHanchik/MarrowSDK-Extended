@@ -1,0 +1,21 @@
+# === AuroraRP ===
+AuroraRP/Mod~/bin/
+AuroraRP/Mod~/obj/
+AuroraRP/Builds/
+AuroraRP/Pallet/
+*.zip
+
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+
+# IDE
+.vs/
+.idea/
+*.csproj.user
+*.sln.DotSettings.user

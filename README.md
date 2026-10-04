@@ -113,3 +113,13 @@ If your issue wasn't listed here and you were unable to find a solution troubles
 # IF YOU WOULD LIKE TO PR SOMETHING TO THIS REPO PLEASE FOLLOW THESE GUIDELINES:
 ### Do not PR any FUNCTIONAL/NON DUMMY scripts that come from paid asset packs/utilities. Dummy scripts are fine. Functional and FREE open source/public scripts are fine.
 ### Do not PR any art that must be paid for or was paid for by someone. This includes assets ripped directly from Bonelab (PRs containing direct Bonelab assets will not be accepted). Only free assets or assets personally made and granted free open access by the creator are allowed. (This keeps things like the examples usable with no worry about copyright)
+
+# AuroraRP (роль-плей мод)
+
+В этом репозитории также лежит мод **AuroraRP** — роль-плей система для BONELAB
+(роли, деньги, двери, магазин оружия, контракты, VR-меню):
+
+- `AuroraRP/README.md` — описание, установка, сборка (начните отсюда);
+- `AuroraRP/Mod~` — исходники MelonLoader-мода (Unity эту папку не компилирует);
+- `AuroraRP/Editor` — скрипты Unity: проверка окружения, сборка DLL, создание контента палета,
+  упаковка палета и сборка релизного архива (меню **AuroraRP** в Unity).
