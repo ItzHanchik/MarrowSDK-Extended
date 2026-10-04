@@ -334,6 +334,7 @@ jobs:
             echo
             echo "BoneLib в Mods: $(ls stage/bonelab/Mods 2>/dev/null | tr '\n' ' ')"
             echo
+            echo "UnityEngine.XRModule.dll: $(ls stage/bonelab/BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies/UnityEngine.XRModule.dll 2>/dev/null || echo НЕТ)"
             echo "Поиск типа InteractableHost в игровых сборках:"
             for f in stage/bonelab/BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies/*.dll; do
               if grep -qa "InteractableHost" "$f" 2>/dev/null; then

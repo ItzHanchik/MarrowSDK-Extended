@@ -6,12 +6,13 @@ using UnityEngine;
 namespace AuroraRP
 {
     /// <summary>
-    /// Ввод с контроллеров: двойной щелчок обоих триггеров (открытие меню),
-    /// кнопка B (двери), кнопка X/A (панель перевода). Использует API MarrowSDK (BaseController).
+    /// Ввод с контроллеров: Y+A (открытие меню), кнопка B (двери),
+    /// кнопка X/A (панель перевода). Читает и MarrowSDK (BaseController), и голый Unity XR —
+    /// поэтому комбинация Y+A работает на любых контроллерах.
     /// </summary>
     public class AuroraInput
     {
-        /// <summary>Двойной щелчок обоих триггеров — открыть/закрыть меню.</summary>
+        /// <summary>Y+A (или другой жест из конфига) — открыть/закрыть меню.</summary>
         public event Action OnMenuGesture;
 
         /// <summary>Кнопка B нажата (любая рука) — двери.</summary>
@@ -22,7 +23,13 @@ namespace AuroraRP
 
         public bool Enabled = true;
 
-        // --- двойной щелчок
+        // --- Y + A: ждём нажатие двумя руками почти одновременно
+        private const float ComboWindow = 0.35f;
+        private float _comboLeftDown = -10f;
+        private float _comboRightDown = -10f;
+        private float _lastComboFire = -10f;
+
+        // --- двойной щелчок (запасной жест)
         private float _leftFirstClick = -10f;
         private float _rightFirstClick = -10f;
         private int _leftClicks;
@@ -51,6 +58,37 @@ namespace AuroraRP
 
         private void HandleMenuGesture(BaseController left, BaseController right)
         {
+            string gesture = AuroraConfig.Current.menuOpenGesture ?? "";
+
+            // 1) Основной жест: Y на левой руке + A на правой (или наоборот по железу).
+            if (gesture == "y_and_a" || gesture == "both")
+            {
+                if (ComboYPlusA())
+                {
+                    FireMenuGesture();
+                    return;
+                }
+            }
+
+            // 2) Кнопки-одиночки из конфига.
+            if (gesture == "thumbstick" && (left.GetThumbStickDown() || right.GetThumbStickDown()))
+            {
+                FireMenuGesture();
+                return;
+            }
+
+            if (gesture == "menu_tap" && left.GetMenuButtonDown())
+            {
+                FireMenuGesture();
+                return;
+            }
+
+            // 3) Запасной жест: двойной щелчок обоих курков.
+            if (gesture != "both_triggers_double" && gesture != "both")
+            {
+                return;
+            }
+
             float window = AuroraConfig.Current.doubleClickWindow;
             float now = Time.realtimeSinceStartup;
 
@@ -83,7 +121,6 @@ namespace AuroraRP
                 }
             }
 
-            // сбрасываем счётчики, если окно прошло
             if (now - _leftFirstClick > window)
             {
                 _leftClicks = 0;
@@ -98,25 +135,123 @@ namespace AuroraRP
             {
                 _leftClicks = 0;
                 _rightClicks = 0;
-
-                if (now - _lastGestureTime > 0.4f)
-                {
-                    _lastGestureTime = now;
-                    OnMenuGesture?.Invoke();
-                }
-            }
-
-            // Альтернативные жесты из конфига
-            string gesture = AuroraConfig.Current.menuOpenGesture;
-            if (gesture == "thumbstick" && (left.GetThumbStickDown() || right.GetThumbStickDown()))
-            {
-                OnMenuGesture?.Invoke();
-            }
-            else if (gesture == "menu_tap" && left.GetMenuButtonDown())
-            {
-                OnMenuGesture?.Invoke();
+                FireMenuGesture();
             }
         }
+
+        private void FireMenuGesture()
+        {
+            float now = Time.realtimeSinceStartup;
+
+            // Защита от дребезга: одно открытие на полсекунды.
+            if (now - _lastGestureTime < 0.4f)
+            {
+                return;
+            }
+
+            _lastGestureTime = now;
+            OnMenuGesture?.Invoke();
+        }
+
+        /// <summary>
+        /// Y (левая рука) + A (правая рука). Нажатия засчитываются, если разошлись не больше
+        /// чем на 0.35 с — двумя руками идеально одновременно не нажать.
+        /// </summary>
+        private bool ComboYPlusA()
+        {
+            float now = Time.realtimeSinceStartup;
+
+            if (LeftYDown())
+            {
+                _comboLeftDown = now;
+            }
+
+            if (RightADown())
+            {
+                _comboRightDown = now;
+            }
+
+            if (now - _comboLeftDown > ComboWindow || now - _comboRightDown > ComboWindow)
+            {
+                return false;
+            }
+
+            if (now - _lastComboFire < 0.5f)
+            {
+                return false;
+            }
+
+            // Гасим пару, чтобы одно нажатие не сработало дважды.
+            _comboLeftDown = -10f;
+            _comboRightDown = -10f;
+            _lastComboFire = now;
+            return true;
+        }
+
+        /// <summary>Y на левом контроллере: сначала сырой Unity XR, потом MarrowSDK.</summary>
+        private static bool LeftYDown()
+        {
+#if AURORA_XR
+            if (RawButton(UnityEngine.XR.XRNode.LeftHand, false))
+            {
+                return true;
+            }
+#endif
+            try
+            {
+                var left = BoneLib.Player.LeftController;
+                return left != null && left.GetBButtonDown();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>A на правом контроллере: сначала сырой Unity XR, потом MarrowSDK.</summary>
+        private static bool RightADown()
+        {
+#if AURORA_XR
+            if (RawButton(UnityEngine.XR.XRNode.RightHand, true))
+            {
+                return true;
+            }
+#endif
+            try
+            {
+                var right = BoneLib.Player.RightController;
+                return right != null && right.GetAButtonDown();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+#if AURORA_XR
+        /// <summary>Сырое состояние кнопки: primary = A/X, secondary = B/Y.</summary>
+        private static bool RawButton(UnityEngine.XR.XRNode node, bool primary)
+        {
+            try
+            {
+                var device = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(node);
+
+                if (!device.isValid)
+                {
+                    return false;
+                }
+
+                bool pressed;
+                var usage = primary ? UnityEngine.XR.CommonUsages.primaryButton : UnityEngine.XR.CommonUsages.secondaryButton;
+
+                return device.TryGetFeatureValue(usage, out pressed) && pressed;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+#endif
 
         private static bool IsTriggerDown(Hand hand)
         {

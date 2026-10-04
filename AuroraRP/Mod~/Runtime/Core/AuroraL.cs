@@ -56,7 +56,7 @@ namespace AuroraRP
             { "menu.tab.doors",           new[] { "Двери", "Doors" } },
             { "menu.tab.contracts",       new[] { "Контракты", "Contracts" } },
             { "menu.tab.settings",        new[] { "Настройки", "Settings" } },
-            { "menu.hint.open",           new[] { "Двойной щелчок обоих триггеров — открыть меню", "Double click both triggers to open the menu" } },
+            { "menu.hint.open",           new[] { "Y + A — открыть меню", "Y + A to open the menu" } },
             { "menu.hint.press",          new[] { "Нажмите триггер, чтобы выбрать пункт", "Press the trigger to select an item" } },
             { "menu.hint.poke",           new[] { "Или ткните правой рукой прямо в пункт", "Or poke an item with your right hand" } },
             { "menu.footer",              new[] { "AuroraRP • Phoenix Framework", "AuroraRP • Phoenix Framework" } },
@@ -191,7 +191,7 @@ namespace AuroraRP
             { "settings.spawn.printer.hint", new[] { "печатает деньги владельцу, пока он рядом", "prints money for its owner while he is near" } },
             { "settings.spawn.ok",        new[] { "Появилось рядом", "Spawned nearby" } },
             { "settings.spawn.fail",      new[] { "Не получилось поставить", "Could not place it" } },
-            { "settings.help.body",       new[] { "Управление: X — меню сумм, B — двери, двойной щелчок обоих триггеров — меню.", "Controls: X — transfer amounts, B — doors, double click both triggers — menu." } },
+            { "settings.help.body",       new[] { "Управление: Y + A — меню (настраивается в конфиге), X — суммы перевода, B — двери и принтеры.", "Controls: Y + A — menu (configurable), X — transfer amounts, B — doors and printers." } },
 
             // ------------------------------------------------------------------ контент / сеть
             { "content.header",           new[] { "Контент мода", "Mod content" } },

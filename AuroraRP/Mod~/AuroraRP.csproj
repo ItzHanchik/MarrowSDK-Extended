@@ -60,6 +60,8 @@
   <PropertyGroup>
     <Il2CppDir Condition="'$(Il2CppDir)' == ''">$(BonelabDir)\BONELAB_Data\il2cpp\MelonLoader\Il2CppAssemblies</Il2CppDir>
     <ModsDir Condition="'$(ModsDir)' == ''">$(BonelabDir)\Mods</ModsDir>
+    <AuroraHasXr Condition="Exists('$(Il2CppDir)\UnityEngine.XRModule.dll')">true</AuroraHasXr>
+    <DefineConstants Condition="'$(AuroraHasXr)' == 'true'">$(DefineConstants);AURORA_XR</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -80,6 +82,8 @@
            Text="В $(ModsDir) нет BoneLib.dll. Установите BoneLib (MelonLoader-мод) — AuroraRP работает поверх него." />
     <Message Importance="high" Text="AuroraRP: LabFusion найден — сборка с мультиплеером." Condition="'$(HasFusion)' == 'true'" />
     <Message Importance="high" Text="AuroraRP: LabFusion не найден — сборка только для одиночной игры." Condition="'$(HasFusion)' != 'true'" />
+    <Message Importance="high" Text="AuroraRP: UnityEngine.XRModule найден — жест Y+A читается напрямую." Condition="'$(AuroraHasXr)' == 'true'" />
+    <Message Importance="high" Text="AuroraRP: UnityEngine.XRModule нет — жест Y+A читается через MarrowSDK (B слева + A справа)." Condition="'$(AuroraHasXr)' != 'true'" />
   </Target>
 
 </Project>

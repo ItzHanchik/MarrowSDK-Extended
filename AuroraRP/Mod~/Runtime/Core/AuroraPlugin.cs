@@ -35,7 +35,7 @@ namespace AuroraRP
                 go.AddComponent<AuroraDriver>();
 
                 AuroraLog.Info("AuroraRP {0} загружен. Автор: {1}", AuroraRuntime.Version, AuroraRuntime.ModAuthor);
-                AuroraLog.Info("Меню: двойной щелчок обоих триггеров · двери: B · перевод: X");
+                AuroraLog.Info("Меню: Y + A · двери и принтеры: B · перевод: X");
             }
             catch (Exception e)
             {

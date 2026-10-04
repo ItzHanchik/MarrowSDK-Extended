@@ -38,9 +38,9 @@ namespace AuroraRP
         public float sfxVolume = 0.7f;
 
         /// <summary>Клавиша/кнопка открытия меню: "both_triggers_double" (по умолчанию), "thumbstick", "menu_tap".</summary>
-        public string menuOpenGesture = "both_triggers_double";
+        public string menuOpenGesture = "y_and_a";
 
-        /// <summary>Окно двойного щелчка триггеров, сек.</summary>
+        /// <summary>Окно двойного щелчка триггеров (запасной жест), сек.</summary>
         public float doubleClickWindow = 0.55f;
 
         // ------------------------------------------------------------------ экономика
@@ -425,6 +425,8 @@ namespace AuroraRP
             if (hitmanMaxCount < 1) hitmanMaxCount = 1;
             if (sfxVolume < 0f) sfxVolume = 0f;
             if (sfxVolume > 1f) sfxVolume = 1f;
+
+            if (string.IsNullOrWhiteSpace(menuOpenGesture)) menuOpenGesture = "y_and_a";
 
             if (modioModId < 0) modioModId = 0;
             if (contentPullAttempts < 0) contentPullAttempts = 0;

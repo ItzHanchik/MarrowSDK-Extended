@@ -7,7 +7,7 @@
   "showRoleTags": true,
   "haptics": true,
   "sfxVolume": 0.7,
-  "menuOpenGesture": "both_triggers_double",
+  "menuOpenGesture": "y_and_a",
   "doubleClickWindow": 0.55,
 
   "startBalance": 5000,
