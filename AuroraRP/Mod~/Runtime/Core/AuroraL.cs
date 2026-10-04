@@ -186,6 +186,22 @@ namespace AuroraRP
             { "settings.help",            new[] { "Помощь", "Help" } },
             { "settings.help.body",       new[] { "Управление: X — меню сумм, B — двери, двойной щелчок обоих триггеров — меню.", "Controls: X — transfer amounts, B — doors, double click both triggers — menu." } },
 
+            // ------------------------------------------------------------------ контент / сеть
+            { "content.header",           new[] { "Контент мода", "Mod content" } },
+            { "content.pallet.present",   new[] { "Палет AuroraRP установлен", "AuroraRP pallet installed" } },
+            { "content.pallet.missing",   new[] { "Палета AuroraRP нет — предметы мода невидимы", "AuroraRP pallet is missing — mod items are invisible" } },
+            { "content.pallet.button",    new[] { "Скачать палет с mod.io", "Download pallet from mod.io" } },
+            { "content.pallet.starting",  new[] { "Скачиваю палет AuroraRP с mod.io…", "Downloading the AuroraRP pallet from mod.io…" } },
+            { "content.pallet.done",      new[] { "Палет AuroraRP установлен и загружен", "AuroraRP pallet downloaded and loaded" } },
+            { "content.pallet.failed",    new[] { "Не удалось скачать палет. Войдите в mod.io в игре и повторите", "Could not download the pallet. Log into mod.io in-game and try again" } },
+            { "content.pallet.noid",      new[] { "В конфиге не указан modioModId — скачайте палет вручную", "modioModId is not set in the config — install the pallet manually" } },
+            { "content.pallet.busy",      new[] { "Загрузка уже идёт…", "Download already in progress…" } },
+            { "content.players.missing",  new[] { "Без AuroraRP: {0}", "Without AuroraRP: {0}" } },
+            { "content.players.allok",    new[] { "У всех игроков есть AuroraRP", "Everyone has AuroraRP" } },
+            { "content.peer.missing",     new[] { "{0} играет без AuroraRP — роли и деньги у него не работают", "{0} is playing without AuroraRP — roles and money will not work for them" } },
+            { "notify.pallet.download",   new[] { "Хост спавнит предмет AuroraRP — качаю палет с mod.io", "Host spawned an AuroraRP item — downloading the pallet from mod.io" } },
+            { "notify.pallet.ready",      new[] { "Палет AuroraRP загружен", "AuroraRP pallet loaded" } },
+
             // ------------------------------------------------------------------ уведомления
             { "notify.role.assigned",     new[] { "Ваша роль: {0}", "Your role: {0}" } },
             { "notify.weapon.spawned",    new[] { "Оружие заспавнено рядом с вами", "A weapon was spawned next to you" } },

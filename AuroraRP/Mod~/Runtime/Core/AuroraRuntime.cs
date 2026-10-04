@@ -77,6 +77,7 @@ namespace AuroraRP
             Net = NetFactory.Create();
             Authority = new AuroraAuthority(State, Wallet, Roles, Doors, Shop, Contracts, Craft, Crime);
             Net.MessageReceived += Authority.HandleMessage;
+            Net.PeerMissingMod += OnPeerMissingMod;
             Input = new AuroraInput();
             Menu = new HandMenu();
             Scanner = new WorldScanner();
@@ -138,6 +139,36 @@ namespace AuroraRP
         }
 
         // -------------------------------------------------------------- утилиты
+
+        /// <summary>Уведомление только себе (без сети).</summary>
+        public static void NotifyLocal(string text, Color color)
+        {
+            AuroraNotifications.Send(text, color);
+        }
+
+        /// <summary>Игрок без AuroraRP: говорим об этом хосту (и всем с модом в будущем).</summary>
+        private static void OnPeerMissingMod(AuroraPeer peer)
+        {
+            try
+            {
+                if (peer == null || !Net.IsHost)
+                {
+                    return;
+                }
+
+                NotifyLocal(AuroraL.Get("content.peer.missing", peer.Name), UiTheme.Warning);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "peer missing mod notify");
+            }
+        }
+
+        /// <summary>Проверить/скачать палет мода (кнопка в меню).</summary>
+        public static bool SyncContentPallet(bool force)
+        {
+            return Net != null && Net.SyncContentPallet(force);
+        }
 
         /// <summary>Отправить уведомление конкретному игроку (по сети или локально).</summary>
         public static void Notify(byte targetId, string text, Color color)

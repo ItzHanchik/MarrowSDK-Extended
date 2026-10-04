@@ -103,6 +103,9 @@ namespace AuroraRP
         event Action<AuroraPeer> PeerJoined;
         event Action<byte> PeerLeft;
 
+        /// <summary>Игрок подключился без AuroraRP (у него нет метаданных мода).</summary>
+        event Action<AuroraPeer> PeerMissingMod;
+
         void Tick(float delta);
         void Send(AuroraNetMsg msg, byte? target = null);
         void Shutdown();
@@ -110,6 +113,27 @@ namespace AuroraRP
         bool TryGetPeerHands(byte peerId, out Vector3? left, out Vector3? right);
         bool TryGetPeerHead(byte peerId, out Vector3 head);
         bool IsPlayerDead(byte peerId);
+
+        /// <summary>Кто в сессии играет без AuroraRP (нужен мод-длл).</summary>
+        IReadOnlyList<AuroraPeer> PeersWithoutMod { get; }
+
+        /// <summary>
+        /// Спавн через сетевой слой: в Fusion предмет появится у всех и станет сетевым.
+        /// false — сеть недоступна, спавним локально (AssetSpawner).
+        /// </summary>
+        bool TryNetworkSpawn(string barcode, Vector3 position, Quaternion rotation, Action<GameObject> callback);
+
+        /// <summary>Палет мода уже установлен у этого игрока.</summary>
+        bool HasContentPallet { get; }
+
+        /// <summary>Строка состояния контента для меню (может быть null).</summary>
+        string ContentPalletStatus { get; }
+
+        /// <summary>
+        /// Пытается подтянуть палет AuroraRP с mod.io (через LabFusion).
+        /// true — палет уже есть или загрузка началась.
+        /// </summary>
+        bool SyncContentPallet(bool force);
 
         // --- высокоуровневые заявки (все проходят через хоста)
         void SendTransferRequest(byte from, byte to, long amount);
@@ -143,11 +167,37 @@ namespace AuroraRP
         public event Action<AuroraNetMsg> MessageReceived;
         public event Action<AuroraPeer> PeerJoined;
         public event Action<byte> PeerLeft;
+        public event Action<AuroraPeer> PeerMissingMod;
 
         public abstract void Tick(float delta);
         public abstract void Send(AuroraNetMsg msg, byte? target = null);
 
         public virtual void Shutdown() { }
+
+        public virtual IReadOnlyList<AuroraPeer> PeersWithoutMod => EmptyPeers;
+
+        public virtual bool TryNetworkSpawn(string barcode, Vector3 position, Quaternion rotation, Action<GameObject> callback) => false;
+
+        public virtual bool HasContentPallet
+        {
+            get
+            {
+                try
+                {
+                    return AuroraRuntime.Spawn != null && AuroraRuntime.Spawn.Exists(AuroraConfig.Current.contentBarcode, out _);
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+        }
+
+        public virtual string ContentPalletStatus => null;
+
+        public virtual bool SyncContentPallet(bool force) => false;
+
+        protected static readonly List<AuroraPeer> EmptyPeers = new List<AuroraPeer>();
 
         public virtual bool TryGetPeerHands(byte peerId, out Vector3? left, out Vector3? right)
         {
@@ -197,6 +247,18 @@ namespace AuroraRP
             catch (Exception e)
             {
                 AuroraLog.Exception(e, "peer left");
+            }
+        }
+
+        protected void RaisePeerMissingMod(AuroraPeer peer)
+        {
+            try
+            {
+                PeerMissingMod?.Invoke(peer);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "peer missing mod");
             }
         }
 
@@ -359,7 +421,6 @@ namespace AuroraRP
         public override int PeerCount => 0;
         public override IReadOnlyList<AuroraPeer> Peers => EmptyPeers;
 
-        private static readonly List<AuroraPeer> EmptyPeers = new List<AuroraPeer>();
         private readonly Queue<AuroraNetMsg> _loopback = new Queue<AuroraNetMsg>();
         private string _localName;
 

@@ -168,6 +168,12 @@ namespace AuroraRP
 
         private void HandleNotify(AuroraNetMsg msg)
         {
+            // Уведомления клиентам рассылает только хост.
+            if (!AuroraRuntime.Net.IsHost && msg.Sender != AuroraRuntime.Net.HostId)
+            {
+                return;
+            }
+
             string text = null;
             string color = "FFFFFF";
 
@@ -185,6 +191,12 @@ namespace AuroraRP
 
         private void HandleSpawnItem(AuroraNetMsg msg)
         {
+            // Спавн «по указке» принимаем только от хоста.
+            if (!AuroraRuntime.Net.IsHost && msg.Sender != AuroraRuntime.Net.HostId)
+            {
+                return;
+            }
+
             string barcode = null;
             AuroraWire.Read(msg.Data, r => barcode = r.ReadString());
 

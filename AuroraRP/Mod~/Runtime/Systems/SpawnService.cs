@@ -86,6 +86,17 @@ namespace AuroraRP
 
             _lastSpawnTime = Time.realtimeSinceStartup;
 
+            // В сети спавним через LabFusion: предмет становится сетевым и появляется у всех.
+            // Важно: если у игрока нет палета мода, Fusion сам скачает его с mod.io.
+            // Проверку Exists здесь пропускаем — локально палета может ещё не быть.
+            var net = AuroraRuntime.Net;
+
+            if (net != null && net.IsConnected && net.TryNetworkSpawn(barcode, position, rotation, callback))
+            {
+                AuroraLog.Info("Сетевой спавн {0}", barcode);
+                return true;
+            }
+
             if (!Exists(barcode, out _))
             {
                 error = "Barcode не найден: " + barcode;

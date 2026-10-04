@@ -87,6 +87,36 @@ namespace AuroraRP
                 menu.AddInfo(AuroraL.Get("common.players") + ": " + AuroraL.Get("common.nobody"), UiTheme.TextDim);
             }
 
+            // Контент мода: палет и игроки без мода.
+            menu.AddSpacer(6f);
+            menu.AddSection(AuroraL.Get("content.header"), UiTheme.Violet);
+
+            bool palletReady = AuroraRuntime.Net.HasContentPallet;
+
+            menu.AddRow(
+                palletReady ? AuroraL.Get("content.pallet.present") : AuroraL.Get("content.pallet.missing"),
+                "info",
+                AuroraRuntime.Net.ContentPalletStatus,
+                () => AuroraRuntime.SyncContentPallet(true),
+                palletReady ? AuroraButton.Style.Ghost : AuroraButton.Style.Primary);
+
+            var missing = AuroraRuntime.Net.PeersWithoutMod;
+
+            if (missing.Count > 0)
+            {
+                string names = "";
+                foreach (var peer in missing)
+                {
+                    names += (names.Length > 0 ? ", " : "") + peer.Name;
+                }
+
+                menu.AddInfo(AuroraL.Get("content.players.missing", AuroraUtils.Truncate(names, 60)), UiTheme.Warning, 40f);
+            }
+            else if (AuroraRuntime.Net.IsConnected)
+            {
+                menu.AddInfo(AuroraL.Get("content.players.allok"), UiTheme.TextDim, 30f);
+            }
+
             if (AuroraRuntime.Net.IsHost)
             {
                 menu.AddSpacer(6f);

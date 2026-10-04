@@ -203,6 +203,24 @@ namespace AuroraRP
         /// <summary>Сколько печатает за раз.</summary>
         public int printerPayout = 250;
 
+        // ------------------------------------------------------------------ распространение контента
+
+        /// <summary>
+        /// ID палета AuroraRP на mod.io (страница мода — из её адреса: mod.io/g/bonelab/m/&lt;имя&gt;;
+        /// число видно в кабинете разработчика). 0 — авто-скачивания нет.
+        /// Если задан, игроки без палета получат его автоматически через LabFusion.
+        /// </summary>
+        public int modioModId = 0;
+
+        /// <summary>Barcode любого предмета из палета AuroraRP — по нему проверяем, стоит ли палет.</summary>
+        public string contentBarcode = "ItzHanchik.AuroraRP.Spawnable.MoneyPrinter";
+
+        /// <summary>Пытаться скачать палет AuroraRP с mod.io автоматически, когда его нет.</summary>
+        public bool autoPullPallet = true;
+
+        /// <summary>Сколько раз за сессию пытаться скачать палет, если не вышло.</summary>
+        public int contentPullAttempts = 3;
+
         // ------------------------------------------------------------------ загрузка/сохранение
 
         [NonSerialized] private static AuroraConfig _current;
@@ -295,6 +313,10 @@ namespace AuroraRP
             if (hitmanMaxCount < 1) hitmanMaxCount = 1;
             if (sfxVolume < 0f) sfxVolume = 0f;
             if (sfxVolume > 1f) sfxVolume = 1f;
+
+            if (modioModId < 0) modioModId = 0;
+            if (contentPullAttempts < 0) contentPullAttempts = 0;
+            if (string.IsNullOrWhiteSpace(contentBarcode)) contentBarcode = printerBarcode;
 
             if (shopItems == null)
             {
