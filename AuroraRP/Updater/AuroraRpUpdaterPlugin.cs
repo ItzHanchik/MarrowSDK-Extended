@@ -27,8 +27,15 @@ namespace AuroraRPUpdater
         public const string ModName = "AuroraRP";
         public const string ModFileName = "AuroraRP.dll";
 
-        /// <summary>Манифест обновлений. Правится в UserData/AuroraRPUpdater.cfg.</summary>
+        /// <summary>
+        /// Манифест обновлений: лежит в свежем релизе, поэтому не зависит от ветки.
+        /// Правится в UserData/AuroraRPUpdater.cfg.
+        /// </summary>
         public const string DefaultManifestUrl =
+            "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/update.json";
+
+        /// <summary>Резервный адрес манифеста, если релизный недоступен.</summary>
+        public const string FallbackManifestUrl =
             "https://raw.githubusercontent.com/ItzHanchik/MarrowSDK-Extended/main/AuroraRP/update.json";
 
         public static AuroraRpUpdaterPlugin Instance { get; private set; }
@@ -51,7 +58,8 @@ namespace AuroraRPUpdater
             _prefs = MelonPreferences.CreateCategory("AuroraRPUpdater");
             _autoUpdate = _prefs.CreateEntry("AutoUpdate", true);
             _manifestUrl = _prefs.CreateEntry("ManifestUrl", DefaultManifestUrl);
-            _installPallet = _prefs.CreateEntry("InstallPallet", true);
+            // Палет больше не нужен: вся красота внутри AuroraRP.dll.
+            _installPallet = _prefs.CreateEntry("InstallPallet", false);
             _installDependencies = _prefs.CreateEntry("InstallDependencies", true);
             _prefs.SaveToFile(false);
 
@@ -66,7 +74,7 @@ namespace AuroraRPUpdater
             try
             {
                 var runner = new UpdateRunner(Log);
-                runner.Run(_manifestUrl.Value, _installPallet.Value, _installDependencies.Value);
+                runner.Run(_manifestUrl.Value, _installPallet.Value, _installDependencies.Value, FallbackManifestUrl);
             }
             catch (Exception e)
             {

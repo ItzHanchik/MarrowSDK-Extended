@@ -246,6 +246,7 @@ jobs:
           for f in AuroraRP.dll AuroraRPUpdater.dll AuroraRP-Thunderstore-1.0.0.zip AuroraRP-pallet-src-1.0.0.zip AuroraRP-1.0.0-complete.zip; do
             cp "out/$f" "release/$f" 2>/dev/null || true
           done
+          cp AuroraRP/update.json release/update.json 2>/dev/null || true
           echo "--- уедет в релиз ---"
           ls -la release
 

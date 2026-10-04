@@ -70,14 +70,22 @@ namespace AuroraRPUpdater
             return client;
         }
 
-        public void Run(string manifestUrl, bool installPallet, bool installDependencies = true)
+        public void Run(string manifestUrl, bool installPallet, bool installDependencies = true, string fallbackUrl = null)
         {
-            if (string.IsNullOrWhiteSpace(manifestUrl))
+            if (string.IsNullOrWhiteSpace(manifestUrl) && string.IsNullOrWhiteSpace(fallbackUrl))
             {
                 return;
             }
 
             var manifest = FetchManifest(manifestUrl);
+
+            if (manifest == null && !string.IsNullOrWhiteSpace(fallbackUrl) &&
+                !string.Equals(fallbackUrl, manifestUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                _log.Msg("Пробую резервный адрес манифеста: " + fallbackUrl);
+                manifest = FetchManifest(fallbackUrl);
+            }
+
             if (manifest == null)
             {
                 return;

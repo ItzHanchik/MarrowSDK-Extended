@@ -99,6 +99,12 @@ namespace AuroraRP
             try
             {
                 part.transform.SetParent(root.transform, false);
+
+                // Префабы всегда лежат отключёнными; копия включается при спавне.
+                if (part.activeSelf)
+                {
+                    part.SetActive(false);
+                }
             }
             catch (Exception e)
             {
@@ -112,6 +118,7 @@ namespace AuroraRP
         public static GameObject BuildCash()
         {
             var root = new GameObject(CashName);
+            root.SetActive(false);
 
             Material note = Material("cash", Money);
             Material band = Material("band", Gold);
@@ -156,6 +163,7 @@ namespace AuroraRP
         {
             // Имя корня важно: WorldScanner/CraftService узнают объекты мода по нему.
             var root = new GameObject("AuroraRP Printer");
+            root.SetActive(false);
 
             Material body = Material("printer_body", Dark);
             Material trim = Material("printer_trim", DarkSoft);
@@ -222,6 +230,7 @@ namespace AuroraRP
         public static GameObject BuildTerminal()
         {
             var root = new GameObject("AuroraRP Terminal");
+            root.SetActive(false);
 
             Material body = Material("terminal_body", Dark);
             Material trim = Material("terminal_trim", DarkSoft);
@@ -270,6 +279,8 @@ namespace AuroraRP
         public static GameObject BuildFlash(string name, Color color)
         {
             var root = new GameObject(name);
+            root.SetActive(false);
+
             var glow = Glow(root.transform, "Glow", color, 0.35f);
             glow.transform.localPosition = Vector3.zero;
 

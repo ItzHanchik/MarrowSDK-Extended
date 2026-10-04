@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "dll": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP.dll",
   "dllSha256": "",
-  "pallet": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP-pallet-1.0.0.zip",
-  "palletVersion": "1.0.0",
+  "pallet": "",
+  "palletVersion": "",
   "dependencies": [
     {
       "file": "BoneLib.dll",
