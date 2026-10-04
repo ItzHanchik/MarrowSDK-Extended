@@ -287,10 +287,16 @@ jobs:
             echo '```'
           } > ci-report/REPORT.md
 
+          # Готовую DLL (репозиторий приватный) кладём рядом с отчётом —
+          # так разработчик может проверить сборку, не скачивая релиз.
+          if [ -f out/AuroraRP.dll ] && [ "$(stat -c%s out/AuroraRP.dll)" -lt 45000000 ]; then
+            cp out/AuroraRP.dll ci-report/AuroraRP.dll
+          fi
+
           cd ci-report
           git init -q -b ci-report
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add REPORT.md
+          git add -A
           git commit -q -m "Отчёт сборки $GITHUB_RUN_ID" || true
           git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-report
