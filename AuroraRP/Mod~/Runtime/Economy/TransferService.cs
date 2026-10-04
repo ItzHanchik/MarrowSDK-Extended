@@ -33,6 +33,9 @@ namespace AuroraRP
         private float _lastTransferTime = -999f;
         private const float TransferCooldown = 1.5f;
 
+        private long _lastSentIntent = -1;
+        private float _lastIntentTime = -999f;
+
         public TransferService(AuroraState state, WalletService wallet)
         {
             _state = state;
@@ -51,7 +54,43 @@ namespace AuroraRP
                 PendingAmount = max;
             }
 
+            SendIntent();
             OnPendingAmountChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Сообщаем хосту выставленную сумму: он должен знать, собираемся мы платить
+        /// или, наоборот, принимаем платёж от игрока без мода.
+        /// </summary>
+        private void SendIntent()
+        {
+            try
+            {
+                var net = AuroraRuntime.Net;
+
+                if (net == null || !net.IsConnected || net.IsHost)
+                {
+                    return;
+                }
+
+                if (PendingAmount == _lastSentIntent && Time.realtimeSinceStartup - _lastIntentTime < 2f)
+                {
+                    return;
+                }
+
+                if (Time.realtimeSinceStartup - _lastIntentTime < 0.35f)
+                {
+                    return;
+                }
+
+                _lastSentIntent = PendingAmount;
+                _lastIntentTime = Time.realtimeSinceStartup;
+                net.SendTransferIntent(PendingAmount);
+            }
+            catch (Exception e)
+            {
+                AuroraLog.Exception(e, "send transfer intent");
+            }
         }
 
         public void AddPendingAmount(long delta)
@@ -136,6 +175,12 @@ namespace AuroraRP
             foreach (var peer in AuroraRuntime.Net.Peers)
             {
                 if (peer.Id == AuroraRuntime.LocalId)
+                {
+                    continue;
+                }
+
+                // Игроки без мода — забота хоста (PeerBridgeService), иначе платёж удвоится.
+                if (!AuroraRuntime.Net.HasMod(peer.Id))
                 {
                     continue;
                 }

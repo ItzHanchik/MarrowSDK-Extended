@@ -31,6 +31,7 @@ namespace AuroraRP
         public static AuroraSfx Sfx { get; internal set; }
         public static DiscordBankBridge Bank { get; internal set; }
         public static WorldScanner Scanner { get; internal set; }
+        public static PeerBridgeService Bridge { get; internal set; }
         public static AuroraDriver Driver { get; internal set; }
 
         public static bool Initialized { get; private set; }
@@ -82,6 +83,7 @@ namespace AuroraRP
             Menu = new HandMenu();
             Scanner = new WorldScanner();
             NameTags = new NameTagService();
+            Bridge = new PeerBridgeService(State);
             Bank = new DiscordBankBridge(State);
 
             GameHooks.Subscribe();
@@ -136,6 +138,7 @@ namespace AuroraRP
             Bank?.Tick(dt);
             Craft?.Tick(dt);
             NameTags?.Tick(dt);
+            Bridge?.Tick(dt);
         }
 
         // -------------------------------------------------------------- утилиты

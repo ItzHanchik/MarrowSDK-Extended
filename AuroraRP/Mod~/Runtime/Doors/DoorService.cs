@@ -23,6 +23,22 @@ namespace AuroraRP
 
         public DoorBehaviour HeldDoor => _heldDoor;
 
+        /// <summary>Все зарегистрированные двери (нужно хосту для игроков без мода).</summary>
+        public IReadOnlyList<DoorBehaviour> AllDoors
+        {
+            get
+            {
+                if (_allDoors == null || _allDoors.Count != _doors.Count)
+                {
+                    _allDoors = new List<DoorBehaviour>(_doors.Values);
+                }
+
+                return _allDoors;
+            }
+        }
+
+        private List<DoorBehaviour> _allDoors;
+
         public DoorService(AuroraState state)
         {
             _state = state;
@@ -346,9 +362,20 @@ namespace AuroraRP
         public List<DoorBehaviour> NearbyDoors(byte playerId, float radius)
         {
             var result = new List<DoorBehaviour>();
-            var head = BoneLib.Player.Head;
+            Vector3 head;
 
-            if (head == null)
+            if (playerId == AuroraRuntime.LocalId)
+            {
+                var localHead = BoneLib.Player.Head;
+
+                if (localHead == null)
+                {
+                    return result;
+                }
+
+                head = localHead.position;
+            }
+            else if (!AuroraRuntime.Net.TryGetPeerHead(playerId, out head))
             {
                 return result;
             }
@@ -362,15 +389,15 @@ namespace AuroraRP
                     continue;
                 }
 
-                if ((door.Root.transform.position - head.position).sqrMagnitude <= maxSqr)
+                if ((door.Root.transform.position - head).sqrMagnitude <= maxSqr)
                 {
                     result.Add(door);
                 }
             }
 
             result.Sort((a, b) =>
-                (a.Root.transform.position - head.position).sqrMagnitude
-                .CompareTo((b.Root.transform.position - head.position).sqrMagnitude));
+                (a.Root.transform.position - head).sqrMagnitude
+                .CompareTo((b.Root.transform.position - head).sqrMagnitude));
             return result;
         }
 

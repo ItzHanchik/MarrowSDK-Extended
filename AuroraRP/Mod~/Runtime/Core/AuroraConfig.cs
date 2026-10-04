@@ -223,6 +223,32 @@ namespace AuroraRP
         /// <summary>Сколько раз за сессию пытаться скачать палет, если не вышло.</summary>
         public int contentPullAttempts = 3;
 
+        // ------------------------------------------------- мост для игроков без мода
+
+        /// <summary>
+        /// Игрок без AuroraRP ставит только палет (Fusion качает его сам). Хост «читает»
+        /// его руки и захваты и выполняет то, что видно физически: оплату за руку и покупку двери.
+        /// </summary>
+        public bool peerBridgeEnabled = true;
+
+        /// <summary>Сколько платит игрок без мода, когда держит руку игрока с модом.</summary>
+        public int passiveTransferAmount = 500;
+
+        /// <summary>Сколько секунд держать руку, чтобы платёж от игрока без мода прошёл.</summary>
+        public float passiveTransferHoldSeconds = 5f;
+
+        /// <summary>Пауза между такими платежами одной пары игроков, сек.</summary>
+        public float passivePairCooldown = 20f;
+
+        /// <summary>Разрешить игрокам без мода покупать двери удержанием.</summary>
+        public bool passiveDoorBuyEnabled = true;
+
+        /// <summary>Сколько секунд нужно подержать дверь, чтобы купить её без мода.</summary>
+        public float passiveDoorHoldSeconds = 4f;
+
+        /// <summary>На сколько метров можно сместиться за удержание (чтобы это не была ходьба через дверь).</summary>
+        public float passiveDoorStandStill = 0.5f;
+
         // ------------------------------------------------------------------ загрузка/сохранение
 
         [NonSerialized] private static AuroraConfig _current;
@@ -341,6 +367,9 @@ namespace AuroraRP
         {
             if (menuScale < 0.5f) menuScale = 0.5f;
             if (menuScale > 2f) menuScale = 2f;
+            if (passiveTransferAmount < 0) passiveTransferAmount = 0;
+            if (passiveTransferHoldSeconds < 0.5f) passiveTransferHoldSeconds = 0.5f;
+            if (passiveDoorHoldSeconds < 1f) passiveDoorHoldSeconds = 1f;
             if (startBalance < 0) startBalance = 0;
             if (transferHoldSeconds < 0.5f) transferHoldSeconds = 0.5f;
             if (doorPrice < 0) doorPrice = 0;

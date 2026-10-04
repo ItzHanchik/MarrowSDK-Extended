@@ -32,7 +32,10 @@ namespace AuroraRP
         PrinterPayout = 11,
         GiveAll = 12,
         Reset = 13,
-        StateRequest = 14
+        StateRequest = 14,
+
+        /// <summary>Клиент сообщает хосту выставленную сумму перевода (нужно для игроков без мода).</summary>
+        TransferIntent = 15
     }
 
     /// <summary>Участник сессии.</summary>
@@ -199,6 +202,9 @@ namespace AuroraRP
 
         protected static readonly List<AuroraPeer> EmptyPeers = new List<AuroraPeer>();
 
+        /// <summary>Стоит ли у игрока наш мод. Для игроков без мода работает «мост» хоста.</summary>
+        public virtual bool HasMod(byte peerId) => true;
+
         public virtual bool TryGetPeerHands(byte peerId, out Vector3? left, out Vector3? right)
         {
             left = null;
@@ -270,6 +276,16 @@ namespace AuroraRP
             {
                 w.Write((byte)action);
                 write?.Invoke(w);
+            }));
+        }
+
+        /// <summary>Сообщает хосту, какая сумма сейчас выставлена на перевод (0 = ничего).</summary>
+        public void SendTransferIntent(long amount)
+        {
+            Send(Action(AuroraAction.TransferIntent, w =>
+            {
+                w.Write(LocalId);
+                w.Write(amount);
             }));
         }
 

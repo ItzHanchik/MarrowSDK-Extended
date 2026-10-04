@@ -94,6 +94,12 @@ namespace AuroraRP
 
         public override IReadOnlyList<AuroraPeer> PeersWithoutMod => _peersWithoutMod;
 
+        /// <summary>true, если у игрока есть AuroraRP (по метаданным Fusion).</summary>
+        public override bool HasMod(byte peerId)
+        {
+            return peerId == LocalId || !_missingModReported.Contains(peerId);
+        }
+
         private bool _helloSent;
         private float _lastPeerPoll;
 

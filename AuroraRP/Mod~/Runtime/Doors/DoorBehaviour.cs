@@ -17,6 +17,28 @@ namespace AuroraRP
         public DoorRecord Record { get; private set; }
 
         public bool IsOwned => Record != null && Record.IsOwned;
+
+        /// <summary>Мировые границы двери — по ним хост понимает, что игрок без мода её держит.</summary>
+        public Bounds WorldBounds
+        {
+            get
+            {
+                if (_boundsCached)
+                {
+                    return _bounds;
+                }
+
+                _bounds = _rootTransform != null
+                    ? ComputeBounds(_rootTransform)
+                    : new Bounds(Root != null ? Root.transform.position : Vector3.zero, Vector3.one);
+
+                _boundsCached = true;
+                return _bounds;
+            }
+        }
+
+        private Bounds _bounds;
+        private bool _boundsCached;
         public byte OwnerId => Record?.ownerId ?? 255;
         public string OwnerName => string.IsNullOrEmpty(Record?.ownerName) ? AuroraL.Get("common.nobody") : Record.ownerName;
 

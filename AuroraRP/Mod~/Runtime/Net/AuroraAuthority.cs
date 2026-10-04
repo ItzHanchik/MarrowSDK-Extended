@@ -23,6 +23,19 @@ namespace AuroraRP
         /// <summary>Кнопка «сбросить экономику» требует второго нажатия.</summary>
         public bool ResetConfirmPending { get; set; }
 
+        /// <summary>Выставленные суммы перевода (для «моста» игроков без мода). Обновляет клиент.</summary>
+        private readonly Dictionary<byte, long> _pendingIntent = new Dictionary<byte, long>();
+
+        public long GetPendingIntent(byte playerId)
+        {
+            return _pendingIntent.TryGetValue(playerId, out long amount) ? amount : 0;
+        }
+
+        public void SetPendingIntent(byte playerId, long amount)
+        {
+            _pendingIntent[playerId] = Math.Max(0, amount);
+        }
+
         /// <summary>Ограничитель частоты рассылки состояния.</summary>
         private float _lastSyncTime;
         private bool _syncQueued;
@@ -229,6 +242,14 @@ namespace AuroraRP
                         byte to = reader.ReadByte();
                         long amount = reader.ReadInt64();
                         ApplyTransfer(from, to, amount);
+                        break;
+                    }
+
+                    case AuroraAction.TransferIntent:
+                    {
+                        byte who = reader.ReadByte();
+                        long intent = reader.ReadInt64();
+                        SetPendingIntent(who, intent);
                         break;
                     }
 
