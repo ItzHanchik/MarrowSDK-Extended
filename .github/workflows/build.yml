@@ -76,11 +76,22 @@ jobs:
             if [ -n "$ZIP" ]; then echo "Источник сборок: приватный репозиторий $PRIVATE_REPO"; fi
           fi
 
-          # 3) черновик релиза в этом же репозитории (без секретов)
+          # 3) черновик релиза в этом же репозитории (без секретов).
+          #    REST-API черновики для токена Actions не отдаёт, поэтому идём через GraphQL.
           if [ -z "$ZIP" ]; then
-            for tag in $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft) | .tag_name' 2>/dev/null); do
-              gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "*.zip" -D stage/assemblies_zip --clobber || true
-            done
+            OWNER="${GITHUB_REPOSITORY%/*}"
+            REPO="${GITHUB_REPOSITORY#*/}"
+            QUERY='query($owner:String!,$repo:String!){repository(owner:$owner,name:$repo){releases(first:50,orderBy:{field:CREATED_AT,direction:DESC}){nodes{tagName isDraft releaseAssets(first:50){nodes{name url}}}}}}'
+            gh api graphql -f query="$QUERY" -F owner="$OWNER" -F repo="$REPO" \
+              --jq '.data.repository.releases.nodes[] | select(.isDraft) | .releaseAssets.nodes[] | select(.name | endswith(".zip")) | "\(.name)\t\(.url)"' \
+              > stage/draft_assets.txt 2>/dev/null || true
+
+            while IFS=$'\t' read -r name url; do
+              [ -z "$url" ] && continue
+              echo "Качаю из черновика: $name"
+              gh api "$url" -H "Accept: application/octet-stream" > "stage/assemblies_zip/$name" 2>/dev/null || true
+            done < stage/draft_assets.txt
+
             ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
             if [ -n "$ZIP" ]; then echo "Источник сборок: черновик релиза в этом репозитории"; fi
           fi
