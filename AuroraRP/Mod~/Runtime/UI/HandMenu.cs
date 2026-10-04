@@ -14,7 +14,8 @@ namespace AuroraRP
         Shop = 3,
         Doors = 4,
         Contracts = 5,
-        Settings = 6
+        Settings = 6,
+        Dashboard = 7
     }
 
     /// <summary>
@@ -36,7 +37,6 @@ namespace AuroraRP
         private CanvasGroup _group;
         private RectTransform _panel;
         private RectTransform _header;
-        private RectTransform _tabBar;
         private RectTransform _content;
         private RectTransform _footer;
         private RectTransform _toastArea;
@@ -52,7 +52,6 @@ namespace AuroraRP
         private AuroraBar _hudBar;
         private TextMeshProUGUI _hudHint;
 
-        private readonly List<AuroraButton> _tabs = new List<AuroraButton>();
         private readonly List<AuroraButton> _liveElements = new List<AuroraButton>();
         private readonly List<TextMeshProUGUI> _liveTexts = new List<TextMeshProUGUI>();
         private readonly List<Image> _toastBars = new List<Image>();
@@ -71,7 +70,11 @@ namespace AuroraRP
         private int _doorPage;
 
         private Transform _handAnchor;
-        private float _worldScale = 0.0011f;
+        private Transform _palmAnchor;
+        private AuroraButton _backButton;
+        private bool _autoOpened;
+        private float _autoSuppressedUntil;
+        private float _worldScale = 0.00058f;
         private bool _tickErrorLogged;
         private bool _subscribedInput;
         private bool _subscribedState;
@@ -122,18 +125,19 @@ namespace AuroraRP
             }
 
             _handAnchor = parent;
+            _palmAnchor = FindPalm(hand);
 
             _rootGo = new GameObject("AuroraRP_Menu");
             _rootGo.transform.SetParent(parent, false);
 
-            _worldScale = 0.0011f * UiTheme.Scale;
+            // Меню живёт на ладони: компактная панель в бело-красных цветах проекта.
+            _worldScale = 0.00058f * UiTheme.Scale;
 
             _canvas = UiKit.NewCanvas("Canvas", _rootGo.transform, new Vector2(UiTheme.PanelWidth, UiTheme.PanelHeight), _worldScale);
             _group = _canvas.GetComponent<CanvasGroup>();
             _panel = _canvas.GetComponent<RectTransform>();
 
             BuildPanel();
-            BuildTabs();
             BuildHud();
 
             _pointer = new UiPointer(_rootGo.transform);
@@ -145,7 +149,7 @@ namespace AuroraRP
             EnsureSubscriptions();
 
             RefreshPage();
-            AuroraLog.Info("Меню создано");
+            AuroraLog.Info("Меню создано на левой ладони (сетка разделов, цвета Aurora RP)");
         }
 
         /// <summary>
@@ -254,7 +258,9 @@ namespace AuroraRP
             BuildContent(core.rectTransform);
             BuildFooter(core.rectTransform);
 
-            _canvas.transform.localPosition = new Vector3(0.12f, 0.30f, 0.10f);
+            // Панель лежит над ладонью: чуть вынесена из плоскости ладони (настраивается).
+            _canvas.transform.localPosition = new Vector3(0f, 0f, AuroraConfig.Current.palmOffsetZ);
+            _canvas.transform.localRotation = Quaternion.identity;
         }
 
         private void BuildHeader(RectTransform core)
@@ -293,6 +299,16 @@ namespace AuroraRP
             _headerStatus.rectTransform.offsetMax = new Vector2(-18f, 0f);
             _headerStatus.rectTransform.anchoredPosition = new Vector2(0f, -64f);
 
+            // Кнопка «назад» на разделах — возвращает к сетке разделов.
+            _backButton = UiKit.Button(_header, AuroraL.Get("common.back"), "back", new Vector2(148f, 56f),
+                () => SwitchPage(MenuPage.Main), AuroraButton.Style.Ghost);
+            _backButton.Rect.anchorMin = new Vector2(0f, 0f);
+            _backButton.Rect.anchorMax = new Vector2(0f, 0f);
+            _backButton.Rect.pivot = new Vector2(0f, 0f);
+            _backButton.Rect.anchoredPosition = new Vector2(14f, 12f);
+            _backButton.Rect.gameObject.SetActive(false);
+            _liveElements.Add(_backButton);
+
             _headerBalance = UiKit.NewText("Balance", _header, "", 34f, UiTheme.Money, TextAlignmentOptions.MidlineRight);
             _headerBalance.rectTransform.anchorMin = new Vector2(1f, 0f);
             _headerBalance.rectTransform.anchorMax = new Vector2(1f, 0f);
@@ -330,11 +346,11 @@ namespace AuroraRP
         private void BuildContent(RectTransform core)
         {
             _content = UiKit.NewRect("Content", core);
-            _content.sizeDelta = new Vector2(UiTheme.PanelWidth - UiTheme.TabWidth - 54f, UiTheme.PanelHeight - UiTheme.HeaderHeight - 100f);
-            _content.anchorMin = new Vector2(1f, 0.5f);
-            _content.anchorMax = new Vector2(1f, 0.5f);
-            _content.pivot = new Vector2(1f, 0.5f);
-            _content.anchoredPosition = new Vector2(-26f, -22f);
+            _content.sizeDelta = new Vector2(UiTheme.PanelWidth - UiTheme.Padding * 2f, UiTheme.PanelHeight - UiTheme.HeaderHeight - 96f);
+            _content.anchorMin = new Vector2(0.5f, 0.5f);
+            _content.anchorMax = new Vector2(0.5f, 0.5f);
+            _content.pivot = new Vector2(0.5f, 0.5f);
+            _content.anchoredPosition = new Vector2(0f, -20f);
         }
 
         private void BuildFooter(RectTransform core)
@@ -353,35 +369,94 @@ namespace AuroraRP
             _footerText.rectTransform.offsetMax = Vector2.zero;
         }
 
-        private void BuildTabs()
+        /// <summary>
+        /// Главная страница — сетка иконок (как в меню на ладони у RepUtils): крупные плитки
+        /// разделов, а не список строк. Быстрые действия — перевод, сводка и закрытие.
+        /// </summary>
+        private void BuildHomeGrid()
         {
-            _tabBar = UiKit.NewRect("Tabs", _panel);
-            _tabBar.sizeDelta = new Vector2(UiTheme.TabWidth, UiTheme.PanelHeight - UiTheme.HeaderHeight - 110f);
-            _tabBar.anchorMin = new Vector2(0f, 0.5f);
-            _tabBar.anchorMax = new Vector2(0f, 0.5f);
-            _tabBar.pivot = new Vector2(0f, 0.5f);
-            _tabBar.anchoredPosition = new Vector2(26f, -24f);
+            const int Columns = 3;
 
-            AddTab(MenuPage.Main, AuroraL.Get("menu.tab.main"), "info");
-            AddTab(MenuPage.Roles, AuroraL.Get("menu.tab.roles"), "users");
-            AddTab(MenuPage.Wallet, AuroraL.Get("menu.tab.wallet"), "wallet");
-            AddTab(MenuPage.Shop, AuroraL.Get("menu.tab.shop"), "gun");
-            AddTab(MenuPage.Doors, AuroraL.Get("menu.tab.doors"), "door");
-            AddTab(MenuPage.Contracts, AuroraL.Get("menu.tab.contracts"), "contract");
-            AddTab(MenuPage.Settings, AuroraL.Get("menu.tab.settings"), "gear");
+            float gap = 12f;
+            float width = _content.sizeDelta.x;
+            float tileW = (width - gap * (Columns - 1)) / Columns;
+            float tileH = Mathf.Min(158f, (_content.sizeDelta.y - gap * 2f) / 3f);
+
+            AddTile(0, 0, tileW, tileH, gap, AuroraL.Get("menu.tab.roles"), "users", MenuPage.Roles);
+            AddTile(1, 0, tileW, tileH, gap, AuroraL.Get("menu.tab.wallet"), "wallet", MenuPage.Wallet);
+            AddTile(2, 0, tileW, tileH, gap, AuroraL.Get("menu.tab.shop"), "gun", MenuPage.Shop);
+
+            AddTile(0, 1, tileW, tileH, gap, AuroraL.Get("menu.tab.doors"), "door", MenuPage.Doors);
+            AddTile(1, 1, tileW, tileH, gap, AuroraL.Get("menu.tab.contracts"), "contract", MenuPage.Contracts);
+            AddTile(2, 1, tileW, tileH, gap, AuroraL.Get("menu.tab.settings"), "gear", MenuPage.Settings);
+
+            var transfer = MakeTile(0, 2, tileW, tileH, gap, AuroraL.Get("money.transfer"), "cash",
+                () => OpenTransfer(), AuroraButton.Style.Primary);
+
+            var dashboard = MakeTile(1, 2, tileW, tileH, gap, AuroraL.Get("common.role"), "aurora",
+                () => SwitchPage(MenuPage.Dashboard), AuroraButton.Style.Ghost);
+
+            MakeTile(2, 2, tileW, tileH, gap, AuroraL.Get("common.close"), "close",
+                () => Close(), AuroraButton.Style.Danger);
+
+            if (transfer != null)
+            {
+                transfer.SetInteractable(AuroraRuntime.Wallet != null);
+            }
+
+            if (dashboard != null && dashboard.Subtitle != null)
+            {
+                dashboard.Subtitle.text = AuroraL.Get("common.players") + ": " +
+                    (AuroraRuntime.State.OtherPlayers(AuroraRuntime.LocalId).Count + 1);
+            }
         }
 
-        private void AddTab(MenuPage page, string label, string icon)
+        private void AddTile(int column, int row, float tileW, float tileH, float gap, string label, string icon, MenuPage page)
         {
-            float y = -_tabs.Count * 96f;
-            var button = UiKit.Button(_tabBar, label, icon, new Vector2(UiTheme.TabWidth, 88f), () => SwitchPage(page), AuroraButton.Style.Tab);
-            button.Rect.anchorMin = new Vector2(0.5f, 1f);
-            button.Rect.anchorMax = new Vector2(0.5f, 1f);
-            button.Rect.pivot = new Vector2(0.5f, 1f);
-            button.Rect.anchoredPosition = new Vector2(0f, y);
-            button.Payload = page;
-            _tabs.Add(button);
-            _liveElements.Add(button);
+            MakeTile(column, row, tileW, tileH, gap, label, icon, () => SwitchPage(page), AuroraButton.Style.Default);
+        }
+
+        /// <summary>Плитка сетки: иконка сверху, подпись снизу — как в меню на ладони.</summary>
+        private AuroraButton MakeTile(int column, int row, float tileW, float tileH, float gap, string label, string icon,
+            Action action, AuroraButton.Style style)
+        {
+            var tile = UiKit.Button(_content, label, icon, new Vector2(tileW, tileH), action, style);
+
+            tile.Rect.anchorMin = new Vector2(0.5f, 1f);
+            tile.Rect.anchorMax = new Vector2(0.5f, 1f);
+            tile.Rect.pivot = new Vector2(0.5f, 1f);
+            tile.Rect.anchoredPosition = new Vector2(
+                (column - 1) * (tileW + gap),
+                -(row * (tileH + gap)));
+
+            // Иконка — по центру верхней части плитки.
+            if (tile.IconImage != null)
+            {
+                var iconRect = tile.IconImage.rectTransform;
+                iconRect.anchorMin = new Vector2(0.5f, 1f);
+                iconRect.anchorMax = new Vector2(0.5f, 1f);
+                iconRect.pivot = new Vector2(0.5f, 0.5f);
+                iconRect.anchoredPosition = new Vector2(0f, -tileH * 0.34f);
+                iconRect.sizeDelta = new Vector2(tileH * 0.42f, tileH * 0.42f);
+            }
+
+            // Подпись — снизу, по центру, в две строки.
+            if (tile.Label != null)
+            {
+                tile.Label.fontSize = 21f;
+                tile.Label.alignment = TextAlignmentOptions.Center;
+                tile.Label.enableWordWrapping = true;
+
+                var labelRect = tile.Label.rectTransform;
+                labelRect.anchorMin = new Vector2(0f, 0f);
+                labelRect.anchorMax = new Vector2(1f, 0f);
+                labelRect.pivot = new Vector2(0.5f, 0f);
+                labelRect.offsetMin = new Vector2(8f, 10f);
+                labelRect.offsetMax = new Vector2(-8f, tileH * 0.44f);
+            }
+
+            OnPageButton(tile);
+            return tile;
         }
 
         private void BuildHud()
@@ -413,7 +488,7 @@ namespace AuroraRP
             _hudHint.rectTransform.offsetMin = new Vector2(72f, 0f);
             _hudHint.rectTransform.offsetMax = new Vector2(-12f, -8f);
 
-            var barBg = UiKit.NewImage("HudBarBg", _hud, UiTheme.RoundedSoft, AuroraUtils.Hex("#0A1226CC"), Image.Type.Sliced);
+            var barBg = UiKit.NewImage("HudBarBg", _hud, UiTheme.RoundedSoft, AuroraUtils.Hex("#3A0407CC"), Image.Type.Sliced);
             barBg.rectTransform.sizeDelta = new Vector2(292f, 18f);
             barBg.rectTransform.anchorMin = new Vector2(0.5f, 0f);
             barBg.rectTransform.anchorMax = new Vector2(0.5f, 0f);
@@ -463,6 +538,9 @@ namespace AuroraRP
             switch (CurrentPage)
             {
                 case MenuPage.Main:
+                    BuildHomeGrid();
+                    break;
+                case MenuPage.Dashboard:
                     BuildMainPage();
                     break;
                 case MenuPage.Roles:
@@ -485,9 +563,10 @@ namespace AuroraRP
                     break;
             }
 
-            for (int i = 0; i < _tabs.Count; i++)
+            // На разделах (кроме сетки) показываем кнопку «назад» в шапке.
+            if (_backButton != null)
             {
-                _tabs[i].SetSelected(_tabs[i].Payload is MenuPage p && p == CurrentPage);
+                _backButton.Rect.gameObject.SetActive(CurrentPage != MenuPage.Main);
             }
 
             _dirty = false;
@@ -585,7 +664,7 @@ namespace AuroraRP
         /// <summary>Пересчитывает масштаб канваса (изменение размера меню в настройках).</summary>
         public void ApplyScale()
         {
-            _worldScale = 0.0011f * UiTheme.Scale;
+            _worldScale = 0.00058f * UiTheme.Scale;
 
             if (_canvas != null)
             {
@@ -615,7 +694,7 @@ namespace AuroraRP
 
         internal void AddProgress(string caption, float value, Color color, out AuroraBar bar)
         {
-            var bg = UiKit.NewImage("ProgBg", _content, UiTheme.RoundedSoft, AuroraUtils.Hex("#0A1226CC"), Image.Type.Sliced);
+            var bg = UiKit.NewImage("ProgBg", _content, UiTheme.RoundedSoft, AuroraUtils.Hex("#3A0407CC"), Image.Type.Sliced);
             bg.rectTransform.sizeDelta = new Vector2(_content.sizeDelta.x, 22f);
             bg.rectTransform.anchorMin = new Vector2(0.5f, 1f);
             bg.rectTransform.anchorMax = new Vector2(0.5f, 1f);
@@ -683,7 +762,22 @@ namespace AuroraRP
             AuroraNotifications.Tick();
             UiHitRegistry.Sweep();
 
-            bool shouldOpen = IsOpen;
+            // Меню на ладони: открыто по жесту ИЛИ само появляется, когда игрок смотрит на руку
+            // (как в меню RepUtils). Конфиг: palmAutoShow.
+            bool palmFocus = AuroraConfig.Current.palmAutoShow && IsPalmFocused() &&
+                             Time.time >= _autoSuppressedUntil;
+            bool shouldOpen = IsOpen || palmFocus;
+
+            if (palmFocus && !_autoOpened)
+            {
+                _autoOpened = true;
+                RefreshPage();
+            }
+            else if (!palmFocus && !IsOpen)
+            {
+                _autoOpened = false;
+            }
+
             _openK = Mathf.Lerp(_openK, shouldOpen ? 1f : 0f, 1f - Mathf.Exp(-11f * dt));
 
             UpdateTransform(dt);
@@ -741,31 +835,124 @@ namespace AuroraRP
             return transfers != null && transfers.IsHolding;
         }
 
+        /// <summary>
+        /// Меню приклеено к левой ладони (как у RepUtils): панель лежит в плоскости ладони,
+        /// чуть вынесена наружу. Сглаживание убирает дрожание руки.
+        /// </summary>
         private void UpdateTransform(float dt)
         {
             var hand = BoneLib.Player.LeftHand;
+
             if (hand != null && _handAnchor != hand.transform)
             {
                 // Игрок пересоздался (новый уровень) — переносим меню на новую руку.
                 _rootGo.transform.SetParent(hand.transform, false);
                 _handAnchor = hand.transform;
-                _canvas.transform.localPosition = new Vector3(0.12f, 0.30f, 0.10f);
+                _palmAnchor = null;
+            }
+
+            if (_palmAnchor == null && hand != null)
+            {
+                _palmAnchor = FindPalm(hand);
+            }
+
+            var palm = _palmAnchor;
+
+            if (palm == null)
+            {
+                _hintTimer += dt;
+                return;
+            }
+
+            // Целевая точка: центр ладони, чуть наружу от плоскости ладони.
+            Vector3 targetPosition = palm.position + palm.forward * AuroraConfig.Current.palmOffsetZ;
+            Quaternion targetRotation = Quaternion.LookRotation(palm.forward, palm.up) *
+                                        Quaternion.Euler(AuroraConfig.Current.palmTilt, 0f, 0f);
+
+            var t = _canvas.transform;
+            float k = 1f - Mathf.Exp(-16f * dt);
+
+            t.position = Vector3.Lerp(t.position, targetPosition, k);
+            t.rotation = Quaternion.Slerp(t.rotation, targetRotation, k);
+
+            _hintTimer += dt;
+        }
+
+        /// <summary>
+        /// Ищем «ладонь» у руки. Член palmPositionTransform есть не во всех версиях игры,
+        /// поэтому берём его отражением (без жёсткой зависимости при сборке), а если не вышло —
+        /// ищем дочерний узел ладони по имени, иначе работаем от самой руки.
+        /// </summary>
+        private static Transform FindPalm(Il2CppSLZ.Marrow.Hand hand)
+        {
+            if (hand == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var property = hand.GetType().GetProperty("palmPositionTransform");
+
+                if (property != null)
+                {
+                    var palm = property.GetValue(hand, null) as Transform;
+
+                    if (palm != null)
+                    {
+                        return palm;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                string[] names = { "Palm", "palm", "PalmPosition", "palmPosition", "HandPalm" };
+
+                foreach (var name in names)
+                {
+                    var child = hand.transform.Find(name);
+
+                    if (child != null)
+                    {
+                        return child;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return hand.transform;
+        }
+
+        /// <summary>Игрок смотрит на левую ладонь (меню само всплывает, как у RepUtils).</summary>
+        private bool IsPalmFocused()
+        {
+            if (_palmAnchor == null)
+            {
+                return false;
             }
 
             var head = BoneLib.Player.Head;
-            if (head != null)
-            {
-                Vector3 toHead = head.position - _canvas.transform.position;
-                toHead.y *= 0.35f;
 
-                if (toHead.sqrMagnitude > 0.0004f)
-                {
-                    Quaternion target = Quaternion.LookRotation(-toHead.normalized, Vector3.up);
-                    _canvas.transform.rotation = Quaternion.Slerp(_canvas.transform.rotation, target, 1f - Mathf.Exp(-9f * dt));
-                }
+            if (head == null)
+            {
+                return false;
             }
 
-            _hintTimer += dt;
+            Vector3 toPalm = _palmAnchor.position - head.position;
+            float distance = toPalm.magnitude;
+
+            if (distance > 1.15f)
+            {
+                return false;
+            }
+
+            return Vector3.Angle(head.forward, toPalm) < 42f;
         }
 
         private void UpdateHeaderAndHud()
@@ -944,11 +1131,11 @@ namespace AuroraRP
                 _hintUntil = Time.time + 4f;
             }
 
-            // Диагностика: размер панели в метрах. Должно быть ~0.68 × 0.84 м.
+            // Диагностика: размер панели в метрах (меню на ладони — примерно 0.32 × 0.42 м).
             try
             {
                 float scale = _panel.localScale.x;
-                AuroraLog.Info("Меню открыто: масштаб {0:0.00000}, панель {1:0.00}×{2:0.00} м",
+                AuroraLog.Info("Меню открыто на ладони: масштаб {0:0.00000}, панель {1:0.00}×{2:0.00} м",
                     scale, UiTheme.PanelWidth * scale, UiTheme.PanelHeight * scale);
             }
             catch (Exception)
@@ -959,6 +1146,12 @@ namespace AuroraRP
         public void Close()
         {
             IsOpen = false;
+
+            // Если меню всплыло само из-за взгляда на ладонь — не показываем его снова
+            // несколько секунд, иначе «Закрыть» ничего не закрывает.
+            _autoSuppressedUntil = Time.time + 6f;
+            _autoOpened = false;
+
             AuroraRuntime.Sfx?.Play(AuroraSfx.Kind.Close);
             _pointer?.SetVisible(false);
         }

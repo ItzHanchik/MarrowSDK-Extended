@@ -65,7 +65,7 @@ namespace AuroraRP
             {
                 Notifier.Send(new Notification
                 {
-                    Title = new NotificationText("AuroraRP", AuroraUtils.Hex("#7FD8FF")),
+                    Title = new NotificationText("AuroraRP", AuroraUtils.Hex("#FF6B72")),
                     Message = new NotificationText(text, Color.white),
                     Type = NotificationType.Information,
                     PopupLength = 3.5f

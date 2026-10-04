@@ -155,7 +155,7 @@ namespace AuroraRP
         /// <summary>Полоса прогресса (например, удержание 5 секунд).</summary>
         public static AuroraBar Bar(Transform parent, Vector2 size, Color fillColor)
         {
-            var background = NewImage("Bar_Bg", parent, UiTheme.RoundedSoft, AuroraUtils.Hex("#0A1226CC"), Image.Type.Sliced);
+            var background = NewImage("Bar_Bg", parent, UiTheme.RoundedSoft, AuroraUtils.Hex("#3A0407CC"), Image.Type.Sliced);
             background.rectTransform.sizeDelta = size;
 
             var fill = NewImage("Bar_Fill", background.rectTransform, UiTheme.RoundedSoft, fillColor, Image.Type.Sliced);
@@ -253,10 +253,10 @@ namespace AuroraRP
 
             _baseColor = style switch
             {
-                Style.Primary => AuroraUtils.Hex("#123A63E6"),
-                Style.Danger => AuroraUtils.Hex("#4A1723E6"),
-                Style.Ghost => AuroraUtils.Hex("#0D1526AA"),
-                Style.Tab => AuroraUtils.Hex("#141F38E6"),
+                Style.Primary => AuroraUtils.Hex("#C2161FF0"),
+                Style.Danger => AuroraUtils.Hex("#6E0A0FE6"),
+                Style.Ghost => AuroraUtils.Hex("#00000000"),
+                Style.Tab => AuroraUtils.Hex("#8E0F14E6"),
                 _ => UiTheme.Row
             };
 

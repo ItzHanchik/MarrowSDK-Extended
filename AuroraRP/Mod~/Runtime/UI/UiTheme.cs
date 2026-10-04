@@ -13,31 +13,33 @@ namespace AuroraRP
     {
         // ------------------------------------------------------------------ цвета
 
-        public static readonly Color Backdrop = AuroraUtils.Hex("#05070FEE");
-        public static readonly Color Panel = AuroraUtils.Hex("#101A2EF2");
-        public static readonly Color PanelLight = AuroraUtils.Hex("#17233DF5");
-        public static readonly Color Row = AuroraUtils.Hex("#16223AED");
-        public static readonly Color RowHover = AuroraUtils.Hex("#22375FF5");
-        public static readonly Color RowPressed = AuroraUtils.Hex("#2E4C80FF");
-        public static readonly Color Accent = AuroraUtils.Hex("#4DE1FF");
-        public static readonly Color AccentDeep = AuroraUtils.Hex("#1F7BFF");
-        public static readonly Color Violet = AuroraUtils.Hex("#8B5CF6");
-        public static readonly Color Text = AuroraUtils.Hex("#EAF6FF");
-        public static readonly Color TextDim = AuroraUtils.Hex("#93A7C4");
-        public static readonly Color Success = AuroraUtils.Hex("#4ADE80");
-        public static readonly Color Danger = AuroraUtils.Hex("#FF5C6C");
-        public static readonly Color Warning = AuroraUtils.Hex("#FFC857");
-        public static readonly Color Money = AuroraUtils.Hex("#B6FF9E");
-        public static readonly Color Divider = AuroraUtils.Hex("#2A3A5CCC");
+        // Фирменные цвета проекта Aurora RP: белый + красный.
+        public static readonly Color Backdrop = AuroraUtils.Hex("#2A0406EE");
+        public static readonly Color Panel = AuroraUtils.Hex("#A51118F2");
+        public static readonly Color PanelLight = AuroraUtils.Hex("#C2151EF5");
+        public static readonly Color Row = AuroraUtils.Hex("#8E0F14ED");
+        public static readonly Color RowHover = AuroraUtils.Hex("#D41C24F5");
+        public static readonly Color RowPressed = AuroraUtils.Hex("#750A0FFF");
+        public static readonly Color Accent = AuroraUtils.Hex("#FFFFFF");
+        public static readonly Color AccentDeep = AuroraUtils.Hex("#FF5A63");
+        public static readonly Color Violet = AuroraUtils.Hex("#FF8A8A");
+        public static readonly Color Text = AuroraUtils.Hex("#FFFFFF");
+        public static readonly Color TextDim = AuroraUtils.Hex("#FFD5D8");
+        public static readonly Color Success = AuroraUtils.Hex("#FFFFFF");
+        public static readonly Color Danger = AuroraUtils.Hex("#FFB0B0");
+        public static readonly Color Warning = AuroraUtils.Hex("#FFD9B0");
+        public static readonly Color Money = AuroraUtils.Hex("#FFFFFF");
+        public static readonly Color Divider = AuroraUtils.Hex("#FF6B72CC");
 
         // ------------------------------------------------------------------ размеры
 
-        public const float PanelWidth = 620f;
-        public const float PanelHeight = 760f;
-        public const float Padding = 26f;
-        public const float RowHeight = 84f;
+        // Меню живёт на левой ладони — размер панели компактный (ладошный), а не «во весь экран».
+        public const float PanelWidth = 560f;
+        public const float PanelHeight = 720f;
+        public const float Padding = 22f;
+        public const float RowHeight = 76f;
         public const float TabWidth = 132f;
-        public const float HeaderHeight = 128f;
+        public const float HeaderHeight = 104f;
 
         public static float Scale => AuroraConfig.Current.menuScale;
 
@@ -447,6 +449,20 @@ namespace AuroraRP
                 case "cash":
                     painter.RoundedRect(10, 22, 76, 52, 10);
                     painter.Circle(48, 48, 16, 0f);
+                    break;
+                case "close":
+                    painter.Line(28, 28, 68, 68, 9);
+                    painter.Line(68, 28, 28, 68, 9);
+                    break;
+                case "back":
+                    painter.Line(70, 48, 28, 48, 9);
+                    painter.Line(28, 48, 48, 66, 9);
+                    painter.Line(28, 48, 48, 30, 9);
+                    break;
+                case "aurora":
+                    painter.Line(12, 40, 36, 58, 7);
+                    painter.Line(36, 58, 60, 36, 7);
+                    painter.Line(60, 36, 84, 58, 7);
                     break;
                 case "printer":
                     painter.RoundedRect(14, 30, 68, 40, 10);

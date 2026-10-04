@@ -113,7 +113,6 @@ namespace AuroraRP
             try
             {
                 AuroraVisuals.Shutdown();
-                NativeMenu.Shutdown();
                 Menu?.Shutdown();
                 Bank?.FlushNow();
                 Doors?.Save();
@@ -155,7 +154,6 @@ namespace AuroraRP
             SafeTick("nametags", () => NameTags?.Tick(dt));
             SafeTick("bridge", () => Bridge?.Tick(dt));
             SafeTick("visuals", () => AuroraVisuals.Tick(dt));
-            SafeTick("nativeui", () => NativeMenu.Tick(dt));
         }
 
         // ------------------------------------------------------------------ страховка

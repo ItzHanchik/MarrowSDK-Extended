@@ -28,6 +28,15 @@ namespace AuroraRP
         /// <summary>Показывать браслет с балансом и ролью на левом предплечье.</summary>
         public bool wristHud = true;
 
+        /// <summary>Меню само появляется на ладони, когда игрок смотрит на левую руку.</summary>
+        public bool palmAutoShow = true;
+
+        /// <summary>Вынос панели меню из плоскости ладони (метры).</summary>
+        public float palmOffsetZ = 0.02f;
+
+        /// <summary>Наклон панели на ладони в градусах (если меню «смотрит не туда»).</summary>
+        public float palmTilt = 0f;
+
         /// <summary>Показывать над головами игроков их роль (LabFusion).</summary>
         public bool showRoleTags = true;
 

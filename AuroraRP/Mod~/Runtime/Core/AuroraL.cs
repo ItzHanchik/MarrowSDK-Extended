@@ -24,6 +24,7 @@ namespace AuroraRP
             { "common.no",                new[] { "Нет", "No" } },
             { "common.back",              new[] { "Назад", "Back" } },
             { "common.close",             new[] { "Закрыть", "Close" } },
+            { "common.back",              new[] { "Назад", "Back" } },
             { "common.buy",               new[] { "Купить", "Buy" } },
             { "common.sell",              new[] { "Продать", "Sell" } },
             { "common.cancel",            new[] { "Отмена", "Cancel" } },
