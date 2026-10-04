@@ -3,6 +3,11 @@ name: Build AuroraRP
 # Запуск: вручную (Actions → Build AuroraRP → Run workflow) или автоматически при пуше тега.
 on:
   workflow_dispatch:
+    inputs:
+      assemblies_url:
+        description: 'Ссылка на zip с Il2CppAssemblies (необязательно; значение остаётся в логе запуска)'
+        required: false
+        default: ''
   push:
     tags:
       - 'aurorarp-v*'
@@ -55,7 +60,7 @@ jobs:
 
       - name: Собрать мод (если в секретах есть игровые сборки)
         env:
-          ASSEMBLIES_URL: ${{ secrets.BONELAB_ASSEMBLIES_URL }}
+          ASSEMBLIES_URL: ${{ inputs.assemblies_url || secrets.BONELAB_ASSEMBLIES_URL }}
           ASSEMBLIES_PAT: ${{ secrets.BONELAB_ASSEMBLIES_PAT }}
           ASSEMBLIES_REPO: ${{ secrets.BONELAB_ASSEMBLIES_REPO }}
         run: |
