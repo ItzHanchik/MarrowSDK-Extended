@@ -2,7 +2,7 @@
   "_readme": "Манифест AuroraRP. Его читает плагин AuroraRPUpdater.dll (папка Plugins). Он качает свежий AuroraRP.dll в Mods, при необходимости обновляет палет в MODS и доставляет моды, без которых AuroraRP не работает (BoneLib, LabFusion). ВАЖНО: вся красота (меню, иконки, анимации, эффекты, звуки) зашита ВНУТРЬ AuroraRP.dll — палет игроку не нужен. Поля pallet/palletVersion оставьте пустыми, если палет не выкладываете. После выпуска новой версии: приложите AuroraRP.dll к GitHub-релизу и обновите поля ниже.",
   "version": "1.0.0",
   "dll": "https://github.com/ItzHanchik/MarrowSDK-Extended/releases/download/aurorarp-v1.0.0/AuroraRP.dll",
-  "dllSha256": "120c26a0baa6918fe1b670f9cc88ff06b7536ae42f64e6320f6be12a86f2b761",
+  "dllSha256": "87b8a295e85259f54f01bc09943da27e59c2943938a9d75f3abe3b42a7e80661",
   "pallet": "",
   "palletVersion": "",
   "dependencies": [
