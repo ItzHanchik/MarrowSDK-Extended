@@ -53,10 +53,22 @@ jobs:
           gh release download v1.14.2 -R Lakatrazz/BONELAB-Fusion -p "LabFusion.dll" -D stage/bonelab/Mods
           ls -la stage/bonelab/Mods
 
-      - name: Собрать мод (если в секретах есть ссылка на игровые сборки)
+      - name: Собрать мод (если в секретах есть игровые сборки)
         env:
           ASSEMBLIES_URL: ${{ secrets.BONELAB_ASSEMBLIES_URL }}
+          ASSEMBLIES_PAT: ${{ secrets.BONELAB_ASSEMBLIES_PAT }}
+          ASSEMBLIES_REPO: ${{ secrets.BONELAB_ASSEMBLIES_REPO }}
         run: |
+          # Игровые сборки можно положить либо по прямой ссылке (BONELAB_ASSEMBLIES_URL),
+          # либо ассетом в приватном репозитории (BONELAB_ASSEMBLIES_REPO + PAT).
+          if [ -z "$ASSEMBLIES_URL" ] && [ -n "$ASSEMBLIES_REPO" ] && [ -n "$ASSEMBLIES_PAT" ]; then
+            mkdir -p stage/private
+            GH_TOKEN="$ASSEMBLIES_PAT" gh release download -R "$ASSEMBLIES_REPO" \
+              -p "*.zip" -D stage/private --clobber || true
+            ASSEMBLIES_URL=$(ls stage/private/*.zip 2>/dev/null | head -1)
+            if [ -n "$ASSEMBLIES_URL" ]; then ASSEMBLIES_URL="file://$ASSEMBLIES_URL"; fi
+          fi
+
           if [ -z "$ASSEMBLIES_URL" ]; then
             echo "BONELAB_ASSEMBLIES_URL не задан — мод соберётся в Unity (AuroraRP → 3. СОБРАТЬ ВСЁ)."
             echo "Чтобы CI собрал и AuroraRP.dll, положите zip с игровыми сборками"
@@ -64,7 +76,10 @@ jobs:
             exit 0
           fi
           mkdir -p stage/bonelab/Il2CppAssemblies
-          curl -sSL "$ASSEMBLIES_URL" -o stage/assemblies.zip
+          case "$ASSEMBLIES_URL" in
+            file://*) cp "${ASSEMBLIES_URL#file://}" stage/assemblies.zip ;;
+            *) curl -sSL "$ASSEMBLIES_URL" -o stage/assemblies.zip ;;
+          esac
           unzip -q stage/assemblies.zip -d stage/assemblies_raw
           find stage/assemblies_raw -name "Il2Cpp*.dll" -o -name "Assembly-CSharp*.dll" -o -name "UnityEngine*.dll" | head -5
           find stage/assemblies_raw -name "*.dll" -exec cp -n {} stage/bonelab/Il2CppAssemblies/ \;
@@ -98,6 +113,24 @@ jobs:
             out/AuroraRP-pallet-src-1.0.0.zip \
             --clobber \
             || gh release upload "${GITHUB_REF_NAME}" out/AuroraRPUpdater.dll out/AuroraRP-Thunderstore-1.0.0.zip out/AuroraRP-pallet-src-1.0.0.zip --clobber
+
+      - name: Итог
+        run: |
+          {
+            echo "### AuroraRP: сборка готова"
+            echo
+            echo "| файл | размер |"
+            echo "|---|---|"
+            for f in out/*; do
+              [ -f "$f" ] && echo "| $(basename "$f") | $(stat -c%s "$f") байт |"
+            done
+            echo
+            if [ -f out/AuroraRP.dll ]; then
+              echo "Мод собран целиком (были игровые сборки)."
+            else
+              echo "Мод (AuroraRP.dll) и палет собираются в Unity: **AuroraRP → 3. СОБРАТЬ ВСЁ**."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Артефакты
         uses: actions/upload-artifact@v4
