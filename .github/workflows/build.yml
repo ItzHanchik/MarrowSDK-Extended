@@ -152,14 +152,19 @@ jobs:
 
       - name: Собрать мод AuroraRP.dll (нужны игровые сборки — см. их поиск выше)
         if: env.ASSEMBLIES_FOUND == 'yes'
+        continue-on-error: true
         run: |
           mkdir -p stage/bonelab/Il2CppAssemblies
           find stage/assemblies_raw -name "*.dll" -exec cp -n {} stage/bonelab/Il2CppAssemblies/ \;
           echo "IL2CPP-сборок: $(ls stage/bonelab/Il2CppAssemblies | wc -l)"
+          set +e
           dotnet build "AuroraRP/Mod~/AuroraRP.csproj" \
             -c Release -o out \
-            -p:BonelabDir="$PWD/stage/bonelab"
+            -p:BonelabDir="$PWD/stage/bonelab" 2>&1 | tee build_mod.log
+          rc=${PIPESTATUS[0]}
           ls -la out
+          echo "код возврата dotnet: $rc"
+          exit $rc
 
       - name: Итог по мод-сборке
         run: |
@@ -242,3 +247,37 @@ jobs:
           name: AuroraRP-build
           path: out/*
           if-no-files-found: warn
+
+      - name: Отчёт в ветку ci-report (диагностика сборки для разработчика)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ci-report
+          {
+            echo "# Отчёт сборки AuroraRP"
+            echo
+            echo "- запуск: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- ref: $GITHUB_REF ($GITHUB_SHA)"
+            echo "- игровые сборки найдены: ${ASSEMBLIES_FOUND:-нет данных}"
+            echo "- мод собран: ${MOD_BUILT:-нет данных}"
+            echo
+            echo "## Файлы сборки"
+            echo '```'
+            ls -la out 2>/dev/null || true
+            sha256sum out/* 2>/dev/null || true
+            echo '```'
+            echo
+            echo "## Лог сборки мода (последние 400 строк)"
+            echo '```'
+            tail -n 400 build_mod.log 2>/dev/null || echo "(сборка мода не запускалась)"
+            echo '```'
+          } > ci-report/REPORT.md
+
+          cd ci-report
+          git init -q -b ci-report
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add REPORT.md
+          git commit -q -m "Отчёт сборки $GITHUB_RUN_ID" || true
+          git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-report
