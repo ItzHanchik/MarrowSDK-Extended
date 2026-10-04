@@ -25,6 +25,10 @@ namespace AuroraRP
     {
         public bool IsOpen { get; private set; }
 
+        private bool _hintShown;
+        private float _hintUntil;
+        private TextMeshProUGUI _hintText;
+
         public MenuPage CurrentPage { get; private set; } = MenuPage.Main;
 
         private GameObject _rootGo;
@@ -235,6 +239,18 @@ namespace AuroraRP
             _accentBar.rectTransform.anchoredPosition = new Vector2(10f, 0f);
 
             BuildHeader(core.rectTransform);
+
+            // Всплывающая подсказка о жесте открытия (видна пару секунд после первого открытия).
+            _hintText = UiKit.NewText("GestureHint", core.rectTransform,
+                "Открыть меню: зажать Y (левая рука) + A (правая).  Закрыть: Y + A или F8.",
+                20f, UiTheme.Accent, TextAlignmentOptions.Midline);
+            _hintText.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+            _hintText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            _hintText.rectTransform.pivot = new Vector2(0.5f, 1f);
+            _hintText.rectTransform.sizeDelta = new Vector2(UiTheme.PanelWidth - 40f, 34f);
+            _hintText.rectTransform.anchoredPosition = new Vector2(0f, -(UiTheme.HeaderHeight + 4f));
+            _hintText.gameObject.SetActive(false);
+
             BuildContent(core.rectTransform);
             BuildFooter(core.rectTransform);
 
@@ -683,6 +699,16 @@ namespace AuroraRP
             _group.alpha = k;
             ApplyPanelScale(k);
 
+            if (_hintText != null)
+            {
+                bool showHint = IsOpen && Time.time < _hintUntil;
+
+                if (_hintText.gameObject.activeSelf != showHint)
+                {
+                    _hintText.gameObject.SetActive(showHint);
+                }
+            }
+
             _pointer?.SetVisible(k > 0.35f);
             _pointer?.Tick(dt, _panel);
 
@@ -909,6 +935,14 @@ namespace AuroraRP
             RefreshPage();
             AuroraRuntime.Sfx?.Play(AuroraSfx.Kind.Open);
             AuroraRuntime.Input?.Haptic(Il2CppSLZ.Marrow.Interaction.Handedness.BOTH, 0.2f, 0.1f);
+
+            // Первые 4 секунды после первого открытия — подсказка о жесте (закрывает страницу
+            // ровно то же место, где её открыл жест Y + A).
+            if (!_hintShown)
+            {
+                _hintShown = true;
+                _hintUntil = Time.time + 4f;
+            }
 
             // Диагностика: размер панели в метрах. Должно быть ~0.68 × 0.84 м.
             try
