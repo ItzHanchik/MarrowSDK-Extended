@@ -1,6 +1,15 @@
 name: Build AuroraRP
 
 # Запуск: вручную (Actions → Build AuroraRP → Run workflow) или автоматически при пуше тега.
+#
+# Игровые сборки (Il2CppAssemblies) ищутся по очереди:
+#   1) ссылка из поля assemblies_url при ручном запуске или из секрета BONELAB_ASSEMBLIES_URL;
+#   2) приватный репозиторий: секреты BONELAB_ASSEMBLIES_REPO + BONELAB_ASSEMBLIES_PAT;
+#   3) черновик (draft) релиза в этом же репозитории с zip-архивом сборок — без секретов;
+#   4) публичный репозиторий ItzHanchik/bonelab-workspace (релиз или git-клон).
+# Если сборки не найдены — собирается только плагин автообновления.
+#
+# Если в любом из архивов лежит aurorarp.pack (красота из Unity) — он вшивается в AuroraRP.dll.
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +26,7 @@ permissions:
 
 jobs:
   build:
-    name: Собрать плагин и упаковать релиз
+    name: Собрать мод, плагин и упаковать релиз
     runs-on: ubuntu-latest
 
     steps:
@@ -40,6 +49,78 @@ jobs:
           ls stage/bonelab | head -20
           ls stage/bonelab/net6 | head -20
 
+      - name: Игровые сборки BONELAB (ищем все доступные источники)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIRECT_URL: ${{ inputs.assemblies_url || secrets.BONELAB_ASSEMBLIES_URL }}
+          PRIVATE_REPO: ${{ secrets.BONELAB_ASSEMBLIES_REPO }}
+          PRIVATE_PAT: ${{ secrets.BONELAB_ASSEMBLIES_PAT }}
+          WORKSPACE_REPO: ItzHanchik/bonelab-workspace
+        run: |
+          mkdir -p stage/assemblies_raw stage/assemblies_zip stage/public
+          ZIP=""
+
+          # 1) прямая ссылка
+          if [ -z "$ZIP" ] && [ -n "$DIRECT_URL" ]; then
+            case "$DIRECT_URL" in
+              file://*) ZIP="${DIRECT_URL#file://}" ;;
+              *) curl -sSL "$DIRECT_URL" -o stage/assemblies_zip/direct.zip && ZIP=stage/assemblies_zip/direct.zip ;;
+            esac
+            echo "Источник сборок: ссылка"
+          fi
+
+          # 2) приватный репозиторий по токену
+          if [ -z "$ZIP" ] && [ -n "$PRIVATE_REPO" ] && [ -n "$PRIVATE_PAT" ]; then
+            GH_TOKEN="$PRIVATE_PAT" gh release download -R "$PRIVATE_REPO" -p "*.zip" -D stage/assemblies_zip --clobber || true
+            ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
+            if [ -n "$ZIP" ]; then echo "Источник сборок: приватный репозиторий $PRIVATE_REPO"; fi
+          fi
+
+          # 3) черновик релиза в этом же репозитории (без секретов)
+          if [ -z "$ZIP" ]; then
+            for tag in $(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft) | .tag_name' 2>/dev/null); do
+              gh release download "$tag" -R "$GITHUB_REPOSITORY" -p "*.zip" -D stage/assemblies_zip --clobber || true
+            done
+            ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
+            if [ -n "$ZIP" ]; then echo "Источник сборок: черновик релиза в этом репозитории"; fi
+          fi
+
+          # 4) репозиторий bonelab-workspace (если он публичный)
+          if [ -z "$ZIP" ]; then
+            gh release download -R "$WORKSPACE_REPO" -p "*.zip" -D stage/assemblies_zip --clobber 2>/dev/null || true
+            ZIP=$(ls stage/assemblies_zip/*.zip 2>/dev/null | head -1)
+            if [ -n "$ZIP" ]; then
+              echo "Источник сборок: релиз $WORKSPACE_REPO"
+            else
+              if git clone --depth 1 "https://github.com/$WORKSPACE_REPO" stage/public 2>/dev/null; then
+                DIR=$(find stage/public -type d -name Il2CppAssemblies 2>/dev/null | head -1)
+                if [ -n "$DIR" ]; then
+                  cp -r "$DIR"/. stage/assemblies_raw/
+                  echo "Источник сборок: git-клон $WORKSPACE_REPO"
+                fi
+              fi
+            fi
+          fi
+
+          if [ -n "$ZIP" ]; then
+            unzip -q -o "$ZIP" -d stage/assemblies_raw
+          fi
+
+          # Красота из Unity: если в архивах есть aurorarp.pack — вшиваем её в DLL
+          PACK=$(find stage/assemblies_raw -name "aurorarp.pack" 2>/dev/null | head -1)
+          if [ -n "$PACK" ]; then
+            mkdir -p "AuroraRP/Mod~/Runtime/Assets"
+            cp "$PACK" "AuroraRP/Mod~/Runtime/Assets/aurorarp.pack"
+            echo "Красота: aurorarp.pack найден и будет вшит в DLL"
+          else
+            echo "Красота: aurorarp.pack не найден — DLL соберётся с кодовой отрисовкой"
+          fi
+
+          COUNT=$(find stage/assemblies_raw -name "*.dll" 2>/dev/null | wc -l)
+          echo "Найдено DLL игровых сборок: $COUNT"
+          find stage/assemblies_raw -name "*.dll" 2>/dev/null | head -5
+          echo "ASSEMBLIES_FOUND=$( [ "$COUNT" -gt 0 ] && echo yes || echo no )" >> "$GITHUB_ENV"
+
       - name: Собрать AuroraRPUpdater.dll
         run: |
           dotnet build AuroraRP/Updater/AuroraRPUpdater.csproj \
@@ -58,40 +139,26 @@ jobs:
           gh release download v1.14.2 -R Lakatrazz/BONELAB-Fusion -p "LabFusion.dll" -D stage/bonelab/Mods
           ls -la stage/bonelab/Mods
 
-      - name: Собрать мод (если в секретах есть игровые сборки)
-        env:
-          ASSEMBLIES_URL: ${{ inputs.assemblies_url || secrets.BONELAB_ASSEMBLIES_URL }}
-          ASSEMBLIES_PAT: ${{ secrets.BONELAB_ASSEMBLIES_PAT }}
-          ASSEMBLIES_REPO: ${{ secrets.BONELAB_ASSEMBLIES_REPO }}
+      - name: Собрать мод AuroraRP.dll (нужны игровые сборки — см. их поиск выше)
+        if: env.ASSEMBLIES_FOUND == 'yes'
         run: |
-          # Игровые сборки можно положить либо по прямой ссылке (BONELAB_ASSEMBLIES_URL),
-          # либо ассетом в приватном репозитории (BONELAB_ASSEMBLIES_REPO + PAT).
-          if [ -z "$ASSEMBLIES_URL" ] && [ -n "$ASSEMBLIES_REPO" ] && [ -n "$ASSEMBLIES_PAT" ]; then
-            mkdir -p stage/private
-            GH_TOKEN="$ASSEMBLIES_PAT" gh release download -R "$ASSEMBLIES_REPO" \
-              -p "*.zip" -D stage/private --clobber || true
-            ASSEMBLIES_URL=$(ls stage/private/*.zip 2>/dev/null | head -1)
-            if [ -n "$ASSEMBLIES_URL" ]; then ASSEMBLIES_URL="file://$ASSEMBLIES_URL"; fi
-          fi
-
-          if [ -z "$ASSEMBLIES_URL" ]; then
-            echo "BONELAB_ASSEMBLIES_URL не задан — мод соберётся в Unity (AuroraRP → 3. СОБРАТЬ ВСЁ)."
-            echo "Чтобы CI собрал и AuroraRP.dll, положите zip с игровыми сборками"
-            echo "(BONELAB_Data/il2cpp/MelonLoader/Il2CppAssemblies) по ссылке в секрете."
-            exit 0
-          fi
           mkdir -p stage/bonelab/Il2CppAssemblies
-          case "$ASSEMBLIES_URL" in
-            file://*) cp "${ASSEMBLIES_URL#file://}" stage/assemblies.zip ;;
-            *) curl -sSL "$ASSEMBLIES_URL" -o stage/assemblies.zip ;;
-          esac
-          unzip -q stage/assemblies.zip -d stage/assemblies_raw
-          find stage/assemblies_raw -name "Il2Cpp*.dll" -o -name "Assembly-CSharp*.dll" -o -name "UnityEngine*.dll" | head -5
           find stage/assemblies_raw -name "*.dll" -exec cp -n {} stage/bonelab/Il2CppAssemblies/ \;
+          echo "IL2CPP-сборок: $(ls stage/bonelab/Il2CppAssemblies | wc -l)"
           dotnet build "AuroraRP/Mod~/AuroraRP.csproj" \
             -c Release -o out \
             -p:BonelabDir="$PWD/stage/bonelab"
           ls -la out
+
+      - name: Итог по мод-сборке
+        run: |
+          if [ -f out/AuroraRP.dll ]; then
+            echo "MOD_BUILT=yes" >> "$GITHUB_ENV"
+            echo "AuroraRP.dll собран: $(stat -c%s out/AuroraRP.dll) байт"
+          else
+            echo "MOD_BUILT=no" >> "$GITHUB_ENV"
+            echo "AuroraRP.dll не собирался: не нашлось игровых сборок (см. шаг «Игровые сборки BONELAB»)."
+          fi
 
       - name: Thunderstore-пакет (плагин + мод, если он собрался)
         run: |
@@ -116,7 +183,6 @@ jobs:
           git -c core.quotepath=false ls-files \
             | grep -E '^(AuroraRP/|\.github/)|^(ПРОЧТИ_МЕНЯ\.md|README\.md|release-notes\.md|\.gitignore|СОБРАТЬ_DLL\.cmd|собрать_dll\.sh)$' \
             > stage/archive/list.txt
-          cat stage/archive/list.txt
           xargs -a stage/archive/list.txt cp --parents -t stage/archive/AuroraRP-1.0.0
           (cd stage/archive && zip -q -r "$GITHUB_WORKSPACE/out/AuroraRP-1.0.0-complete.zip" AuroraRP-1.0.0)
           unzip -l out/AuroraRP-1.0.0-complete.zip | tail -3
@@ -124,7 +190,7 @@ jobs:
       - name: Список файлов для релиза
         run: |
           mkdir -p release
-          for f in AuroraRPUpdater.dll AuroraRP-Thunderstore-1.0.0.zip AuroraRP-pallet-src-1.0.0.zip AuroraRP-1.0.0-complete.zip AuroraRP.dll; do
+          for f in AuroraRP.dll AuroraRPUpdater.dll AuroraRP-Thunderstore-1.0.0.zip AuroraRP-pallet-src-1.0.0.zip AuroraRP-1.0.0-complete.zip; do
             cp "out/$f" "release/$f" 2>/dev/null || true
           done
           echo "--- уедет в релиз ---"
@@ -142,16 +208,20 @@ jobs:
           {
             echo "### AuroraRP: сборка готова"
             echo
+            echo "Мод (AuroraRP.dll): **${MOD_BUILT}**"
+            echo
             echo "| файл | размер |"
             echo "|---|---|"
             for f in out/*; do
               [ -f "$f" ] && echo "| $(basename "$f") | $(stat -c%s "$f") байт |"
             done
             echo
-            if [ -f out/AuroraRP.dll ]; then
-              echo "Мод собран целиком (были игровые сборки)."
+            if [ "$MOD_BUILT" = "yes" ]; then
+              echo "Мод собран целиком: файл приложен к релизу и лежит в Thunderstore-пакете (Mods/)."
             else
-              echo "Мод (AuroraRP.dll) и палет собираются в Unity: **AuroraRP → 3. СОБРАТЬ ВСЁ**."
+              echo "Игровые сборки не найдены, поэтому собран только плагин автообновления."
+              echo "Способы отдать сборки: секреты \`BONELAB_ASSEMBLIES_URL\` или \`BONELAB_ASSEMBLIES_REPO\`+\`BONELAB_ASSEMBLIES_PAT\`,"
+              echo "либо zip в черновике релиза этого репозитория, либо публичный репозиторий \`ItzHanchik/bonelab-workspace\`."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
