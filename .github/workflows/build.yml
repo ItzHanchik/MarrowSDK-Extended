@@ -240,10 +240,45 @@ jobs:
           (cd stage/archive && zip -q -r "$GITHUB_WORKSPACE/out/AuroraRP-1.0.0-complete.zip" AuroraRP-1.0.0)
           unzip -l out/AuroraRP-1.0.0-complete.zip | tail -3
 
+      - name: Готовый Unity-проект «одна кнопка» (zip)
+        run: |
+          set -e
+          ROOT=stage/unity/AuroraRP-Unity-Project
+          rm -rf stage/unity
+          mkdir -p "$ROOT/Assets/AuroraRP/Editor" "$ROOT/AuroraRP-Files"
+
+          # каркас проекта: ProjectSettings, Packages, инструкции, установщик без Unity
+          cp -r AuroraRP/UnityProject/. "$ROOT/"
+
+          # кнопка в Unity (не зависит от MarrowSDK — компилируется в любом проекте)
+          cp AuroraRP/Editor/AuroraRpInstall.cs "$ROOT/Assets/AuroraRP/Editor/"
+
+          # уже собранные файлы
+          cp out/AuroraRP.dll "$ROOT/AuroraRP-Files/" || true
+          cp out/AuroraRPUpdater.dll "$ROOT/AuroraRP-Files/" || true
+          cp AuroraRP/update.json "$ROOT/AuroraRP-Files/" || true
+
+          # исходники (лежат вне Assets — Unity их не компилирует)
+          mkdir -p "$ROOT/AuroraRP-Files/Source/Editor"
+          cp -r AuroraRP/Mod~/. "$ROOT/AuroraRP-Files/Source/" || true
+          for f in AuroraRP/Editor/*.cs; do
+            base=$(basename "$f")
+            [ "$base" = "AuroraRpInstall.cs" ] || cp "$f" "$ROOT/AuroraRP-Files/Source/Editor/"
+          done
+          cp "ПРОЧТИ_МЕНЯ.md" "$ROOT/AuroraRP-Files/ПРОЧТИ_МЕНЯ.md" || true
+          cp release-notes.md "$ROOT/AuroraRP-Files/что-нового.md" || true
+
+          mkdir -p out
+          rm -f out/AuroraRP-Unity-Project-1.0.0.zip
+          (cd stage/unity && zip -q -r "$GITHUB_WORKSPACE/out/AuroraRP-Unity-Project-1.0.0.zip" AuroraRP-Unity-Project)
+          echo "--- что внутри проекта ---"
+          unzip -l out/AuroraRP-Unity-Project-1.0.0.zip | head -25
+          ls -la out/AuroraRP-Unity-Project-1.0.0.zip
+
       - name: Список файлов для релиза
         run: |
           mkdir -p release
-          for f in AuroraRP.dll AuroraRPUpdater.dll AuroraRP-Thunderstore-1.0.0.zip AuroraRP-pallet-src-1.0.0.zip AuroraRP-1.0.0-complete.zip; do
+          for f in AuroraRP.dll AuroraRPUpdater.dll AuroraRP-Unity-Project-1.0.0.zip AuroraRP-Thunderstore-1.0.0.zip AuroraRP-pallet-src-1.0.0.zip AuroraRP-1.0.0-complete.zip; do
             cp "out/$f" "release/$f" 2>/dev/null || true
           done
           cp AuroraRP/update.json release/update.json 2>/dev/null || true
